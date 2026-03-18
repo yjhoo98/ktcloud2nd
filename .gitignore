@@ -13,3 +13,5 @@ override.tf.json
 Thumbs.db
 *.tfvars
 !*.tfvars.example
+*.pem
+ansible/inventory/hosts.ini # 자동 생성되는 파일임

@@ -1,0 +1,12 @@
+---
+- name: K3s 마스터 노드 설정
+  hosts: master
+  become: yes
+  roles:
+    - k3s_master
+
+- name: K3s 워커 노드 설정
+  hosts: worker
+  become: yes
+  roles:
+    - k3s_worker
