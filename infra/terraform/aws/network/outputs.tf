@@ -53,6 +53,26 @@ output "alb_dns_name" {
   value       = aws_lb.public.dns_name
 }
 
+output "alb_sg_id" {
+  description = "ALB security group identifier."
+  value       = aws_security_group.alb.id
+}
+
+output "bastion_sg_id" {
+  description = "Bastion security group identifier."
+  value       = aws_security_group.bastion.id
+}
+
+output "k3s_nodes_sg_id" {
+  description = "K3s nodes security group identifier."
+  value       = aws_security_group.k3s_nodes.id
+}
+
+output "db_sg_id" {
+  description = "Database security group identifier."
+  value       = aws_security_group.db.id
+}
+
 output "security_group_ids" {
   description = "Core security group identifiers."
   value = {

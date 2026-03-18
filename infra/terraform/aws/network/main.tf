@@ -1,4 +1,8 @@
 locals {
+  public_subnet_roles = ["edge-ops", "edge-public"]
+  private_app_roles   = ["operator-app", "user-app"]
+  private_db_roles    = ["db-a", "db-c"]
+
   private_app_nat_gateway_index = {
     for idx, subnet in var.private_app_subnet_cidrs :
     idx => (var.enable_multi_nat ? idx : 0)
@@ -34,6 +38,7 @@ resource "aws_subnet" "public" {
   tags = {
     Name = "${var.name_prefix}-public-${count.index + 1}"
     Tier = "public"
+    Role = local.public_subnet_roles[count.index]
   }
 }
 
@@ -47,6 +52,7 @@ resource "aws_subnet" "private_app" {
   tags = {
     Name = "${var.name_prefix}-private-app-${count.index + 1}"
     Tier = "private-app"
+    Role = local.private_app_roles[count.index]
   }
 }
 
@@ -60,6 +66,7 @@ resource "aws_subnet" "private_db" {
   tags = {
     Name = "${var.name_prefix}-private-db-${count.index + 1}"
     Tier = "private-db"
+    Role = local.private_db_roles[count.index]
   }
 }
 

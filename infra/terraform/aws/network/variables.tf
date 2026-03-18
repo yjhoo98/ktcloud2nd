@@ -24,13 +24,13 @@ variable "availability_zones" {
 variable "vpc_cidr" {
   description = "Primary CIDR block for the VPC."
   type        = string
-  default     = "10.20.0.0/16"
+  default     = "10.0.0.0/16"
 }
 
 variable "public_subnet_cidrs" {
   description = "CIDR blocks for public subnets."
   type        = list(string)
-  default     = ["10.20.0.0/24", "10.20.1.0/24"]
+  default     = ["10.0.0.0/24", "10.0.1.0/24"]
 
   validation {
     condition     = length(var.public_subnet_cidrs) == length(var.availability_zones)
@@ -41,7 +41,7 @@ variable "public_subnet_cidrs" {
 variable "private_app_subnet_cidrs" {
   description = "CIDR blocks for private application subnets."
   type        = list(string)
-  default     = ["10.20.10.0/24", "10.20.11.0/24"]
+  default     = ["10.0.10.0/24", "10.0.11.0/24"]
 
   validation {
     condition     = length(var.private_app_subnet_cidrs) == length(var.availability_zones)
@@ -52,7 +52,7 @@ variable "private_app_subnet_cidrs" {
 variable "private_db_subnet_cidrs" {
   description = "CIDR blocks for private database subnets."
   type        = list(string)
-  default     = ["10.20.20.0/24", "10.20.21.0/24"]
+  default     = ["10.0.20.0/24", "10.0.21.0/24"]
 
   validation {
     condition     = length(var.private_db_subnet_cidrs) == length(var.availability_zones)
@@ -67,9 +67,9 @@ variable "allowed_ssh_cidrs" {
 }
 
 variable "enable_multi_nat" {
-  description = "Create one NAT gateway per AZ for private app subnets."
+  description = "Create one NAT gateway per AZ. False means a single NAT in the first public subnet."
   type        = bool
-  default     = true
+  default     = false
 }
 
 variable "tags" {

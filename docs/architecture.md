@@ -26,12 +26,23 @@ flowchart LR
 ## AWS Public Cloud Scope
 
 - 인터넷 진입점은 `ALB` 단일화
+- `WAF -> ALB` 구조를 목표로 하지만, WAF는 현재 Phase 1 구현 범위에서 보류
 - 서비스 워크로드는 `Private App Subnet`
 - RDS는 `Private DB Subnet`
 - S3 연동은 `Gateway Endpoint` 우선
 - 운영자 접근은 `Bastion Host + 허용된 관리자 IP` 기준
 - K3s는 `1 master + 3 worker` 초안 기준으로 설계
-- WAF는 ALB 앞단에 연결 예정
+- NAT Gateway는 비용 절감을 위해 1대만 사용
+
+## Phase 1 AWS Placement
+
+- `Public-A`: ALB, NAT Gateway, Bastion Host
+- `Public-C`: ALB
+- `Private-App-A`: K3s master 1, worker 1
+- `Private-App-C`: worker 2대
+- `Private-DB-A/C`: 단일 RDS 인스턴스를 위한 DB Subnet Group
+- `S3 Gateway Endpoint`: Private Route Table과 연결
+- `RDS`: 인스턴스는 1대만 생성, DB Subnet은 2개 준비
 
 ## AWS Network Baseline
 
