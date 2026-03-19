@@ -28,14 +28,8 @@ resource "aws_instance" "k3s_master" {
   key_name      = local.key_name
   subnet_id     = local.op_subnet_id
   vpc_security_group_ids = [local.k3s_sg_id]
-
-  user_data = <<-EOF
-    #!/bin/bash
-    curl -sfL https://get.k3s.io | sh -s - server \
-    --token "my-shared-secret-token-1234" \
-    --write-kubeconfig-mode 644 \
-    --tls-san ${self.public_ip}
-    EOF
+  private_ip             = "10.0.1.10"  # 운영자용 서브넷 CIDR 대역에 맞춰서 입력해야함 
+  iam_instance_profile = aws_iam_instance_profile.k3s_node_profile.name
 
   tags = {
     Name = "${local.name_prefix}-k3s-master"
@@ -50,6 +44,8 @@ resource "aws_instance" "k3s_worker_op" {
   key_name      = local.key_name
   subnet_id     = local.op_subnet_id
   vpc_security_group_ids = [local.k3s_sg_id]
+  private_ip             = "10.0.1.11"
+  iam_instance_profile = aws_iam_instance_profile.k3s_node_profile.name
 
   tags = {
     Name = "${local.name_prefix}-k3s-worker-op"
@@ -64,7 +60,9 @@ resource "aws_instance" "k3s_worker_user_fixed" {
   key_name      = local.key_name
   subnet_id     = local.user_subnet_id
   vpc_security_group_ids = [local.k3s_sg_id]
-
+  private_ip             = "10.0.2.10"
+  iam_instance_profile = aws_iam_instance_profile.k3s_node_profile.name
+  
   tags = {
     Name = "${local.name_prefix}-k3s-worker-user-fixed"
     Role = "worker-user"
@@ -78,17 +76,18 @@ resource "aws_launch_template" "k3s_worker_user_lt" {
   instance_type = local.instance_type
   key_name      = local.key_name
 
-  network_interfaces {
-    associate_public_ip_address = false
-    security_groups             = [local.k3s_sg_id]
+  iam_instance_profile {
+    name = aws_iam_instance_profile.k3s_node_profile.name
   }
 
+  vpc_security_group_ids = [local.k3s_sg_id]
+  
   user_data = base64encode(<<-EOF
     #!/bin/bash
     # 마스터 노드의 Private IP를 참조하여 자동으로 조인합니다.
     curl -sfL https://get.k3s.io | \
     K3S_URL="https://${aws_instance.k3s_master.private_ip}:6443" \
-    K3S_TOKEN="my-shared-secret-token-1234" \
+    K3S_TOKEN="${var.k3s_shared_token}" \
     sh -
     EOF
   )
@@ -107,7 +106,11 @@ resource "aws_autoscaling_group" "k3s_worker_user_asg" {
   desired_capacity    = 1
   max_size            = 3
   min_size            = 1
-  
+
+  health_check_type         = "EC2"  # EC2 자체 상태를 기준으로 교체 여부 판단 
+  health_check_grace_period = 180    # 초기 부팅 및 K3s 설치 시간을 벌어줌 (3분)
+  depends_on = [aws_instance.k3s_master] #마스터 생성 후 동작하도록
+
   vpc_zone_identifier = [local.user_subnet_id]
 
   launch_template {

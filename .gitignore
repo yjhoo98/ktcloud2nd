@@ -12,6 +12,10 @@ override.tf.json
 .DS_Store
 Thumbs.db
 *.tfvars
+terraform.tfvars
 !*.tfvars.example
 *.pem
-ansible/inventory/hosts.ini # 자동 생성되는 파일임
+
+
+infra/ansible/inventory/hosts.ini # 자동 생성되는 파일임 => k3s master, worker node의 IP주소 포함
+infra/ansible/vault/vault_password # K3s 토큰 저장 vault password

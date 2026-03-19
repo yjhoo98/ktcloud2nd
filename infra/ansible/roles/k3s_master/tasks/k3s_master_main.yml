@@ -1,9 +1,10 @@
-# 1. K3s 마스터 설치
+# 1. K3s 마스터 설치 (고정 토큰 적용)
 - name: K3s 마스터 노드 설치
   shell: |
     curl -sfL https://get.k3s.io | sh -s - server \
     --write-kubeconfig-mode 644 \
-    --tls-san {{ ansible_host }}
+    --tls-san {{ ansible_host }} \
+    --token "{{ vault_k3s_shared_token }}"
   args:
     creates: /usr/local/bin/k3s
 
@@ -13,26 +14,28 @@
     port: 6443
     delay: 10
 
-# 3. 토큰 가져오기 및 공유
-- name: K3s 서버 토큰 읽기
-  command: cat /var/lib/rancher/k3s/server/node-token
-  register: k3s_token
-  changed_when: false
-
-- name: 토큰 공유
-  set_fact:
-    shared_k3s_token: "{{ k3s_token.stdout }}"
-  delegate_to: "{{ item }}"
-  delegate_facts: true
-  with_items: "{{ groups['all'] }}"
-
-# 4. Helm 설치
+# 3. Helm 설치
 - name: Helm 설치 스크립트 실행
   shell: curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
   args:
     creates: /usr/local/bin/helm
 
-# 5. Cluster Autoscaler 배포
+# 4. Helm Ansible 모듈 설치
+- name: Helm Ansible 모듈을 위한 Python 패키지 설치
+  apt:
+    name:
+      - python3-pip
+      - python3-kubernetes
+    state: present
+    update_cache: yes
+
+# 5.repo 추가 task 선행 필요
+- name: Cluster Autoscaler Helm repo 추가
+  kubernetes.core.helm_repository:
+    name: autoscaler
+    repo_url: https://kubernetes.github.io/autoscaler
+
+# 6. Cluster Autoscaler 배포
 - name: Cluster Autoscaler 배포
   kubernetes.core.helm:
     name: cluster-autoscaler
@@ -51,3 +54,9 @@
         v: 4
         cloud-provider: aws
         expander: least-waste
+
+- name: K3s 마스터 서비스 활성화 및 시작
+  systemd:
+    name: k3s
+    state: started
+    enabled: yes

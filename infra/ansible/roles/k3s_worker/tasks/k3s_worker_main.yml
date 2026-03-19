@@ -1,0 +1,22 @@
+# 1. 마스터의 프라이빗 IP 주소 가져오기
+- name: 마스터 IP 설정
+  set_fact:
+    # ansible_host가 ID이므로, 인벤토리에서 정의한 'private_ip' 변수를 가져옵니다.
+    master_ip: "{{ hostvars[groups['masters'][0]]['private_ip'] }}"
+
+# 2. 고정 토큰을 사용하여 K3s 워커 조인
+- name: K3s 워커 노드 설치 및 클러스터 조인
+  shell: |
+    curl -sfL https://get.k3s.io | K3S_URL=https://{{ master_ip }}:6443 \
+    K3S_TOKEN="{{ vault_k3s_shared_token }}" sh -
+  args:
+    # /usr/local/bin/k3s 파일이 이미 존재하면 이 명령어를 실행하지 않습니다 (멱등성 유지).
+    creates: /usr/local/bin/k3s
+
+# ... (기존 워커 조인 태스크 생략)
+
+- name: K3s 워커 서비스 활성화 및 시작
+  systemd:
+    name: k3s-agent
+    state: started
+    enabled: yes
