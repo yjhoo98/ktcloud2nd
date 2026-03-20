@@ -1,0 +1,24 @@
+name_prefix = "ktcloud2nd-dev"
+
+db_name     = "vehicle_db"
+db_username = "dbadmin"
+db_password = "change-me"
+
+db_subnet_ids = [
+  "subnet-xxxxxxxx",
+  "subnet-yyyyyyyy",
+]
+
+vpc_security_group_ids = [
+  "sg-xxxxxxxx",
+]
+
+instance_class          = "db.t3.micro"
+allocated_storage       = 20
+storage_type            = "gp3"
+backup_retention_period = 1
+
+tags = {
+  Environment = "dev"
+  Owner       = "infra3"
+}
