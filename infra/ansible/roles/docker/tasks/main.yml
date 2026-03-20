@@ -1,6 +1,5 @@
 ---
-# 이전 버전의 Docker 관련 패키지 삭제 (충돌 방지)
-- name: Remove old versions of Docker
+- name: 이전 버전의 Docker 관련 패키지 삭제 (충돌 방지)
   apt:
     name:
       - docker
@@ -10,8 +9,7 @@
       - runc
     state: absent
 
-# 필수 의존성 패키지 설치
-- name: Install prerequisite packages
+- name: 필수 의존성 패키지 설치
   apt:
     name:
       - ca-certificates
@@ -21,29 +19,25 @@
     state: present
     update_cache: yes
 
-# Docker 공식 GPG 키 추가를 위한 디렉토리 생성
-- name: Create directory for Docker GPG key
+- name: Docker 공식 GPG 키 추가를 위한 디렉토리 생성
   file:
     path: /etc/apt/keyrings
     state: directory
     mode: '0755'
 
-# Docker 공식 GPG 키 다운로드
-- name: Add Docker official GPG key
+- name: Docker 공식 GPG 키 다운로드
   apt_key:
     url: https://download.docker.com/linux/ubuntu/gpg
     state: present
     keyring: /etc/apt/keyrings/docker.gpg
 
-# Docker 리포지토리 등록
-- name: Add Docker repository to apt sources
+- name: Docker 리포지토리 등록
   apt_repository:
     repo: "deb [arch={{ ansible_architecture | replace('x86_64', 'amd64') }} signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
     state: present
     filename: docker
 
-# Docker 엔진 및 Docker Compose 플러그인 설치
-- name: Install Docker Engine and Docker Compose plugin
+- name: Docker 엔진 및 Docker Compose 플러그인 설치
   apt:
     name:
       - docker-ce
@@ -54,15 +48,13 @@
     state: present
     update_cache: yes
 
-# Docker 서비스 시작 및 부팅 시 자동 실행 설정
-- name: Ensure Docker is started and enabled
+- name: Docker 서비스 시작 및 부팅 시 자동 실행 설정
   service:
     name: docker
     state: started
     enabled: yes
 
-# 현재 사용자를 docker 그룹에 추가 (sudo 없이 사용 가능하게)
-- name: Add user to docker group
+- name: 현재 사용자를 docker 그룹에 추가
   user:
     name: "{{ ansible_user }}"
     groups: docker

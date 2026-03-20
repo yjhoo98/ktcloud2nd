@@ -1,0 +1,6 @@
+# Azure VM 전체 공통 환경 설정
+- name: Prepare Docker Environment on Azure VMs
+  hosts: azure_vms
+  become: yes # 관리자 권한 실행
+  roles:
+    - role: docker
