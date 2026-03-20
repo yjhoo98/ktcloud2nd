@@ -1,17 +1,11 @@
+aws_region         = "ap-northeast-2"
+network_state_path = "../network/terraform.tfstate"
+
 name_prefix = "ktcloud2nd-dev"
 
 db_name     = "vehicle_db"
 db_username = "dbadmin"
 db_password = "change-me"
-
-db_subnet_ids = [
-  "subnet-xxxxxxxx",
-  "subnet-yyyyyyyy",
-]
-
-vpc_security_group_ids = [
-  "sg-xxxxxxxx",
-]
 
 instance_class          = "db.t3.micro"
 allocated_storage       = 20

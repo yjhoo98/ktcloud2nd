@@ -52,7 +52,7 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "this" {
 
 resource "aws_db_subnet_group" "this" {
   name       = "${var.name_prefix}-db-subnet-group"
-  subnet_ids = var.db_subnet_ids
+  subnet_ids = data.terraform_remote_state.network.outputs.private_db_subnet_ids
 
   tags = merge(var.tags, {
     Name = "${var.name_prefix}-db-subnet-group"
@@ -75,7 +75,7 @@ resource "aws_db_instance" "this" {
   port     = var.db_port
 
   db_subnet_group_name   = aws_db_subnet_group.this.name
-  vpc_security_group_ids = var.vpc_security_group_ids
+  vpc_security_group_ids = [data.terraform_remote_state.network.outputs.db_sg_id]
 
   publicly_accessible = false
   multi_az            = false

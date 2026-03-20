@@ -1,9 +1,7 @@
 ---
-# 워커 노드는 ASG Launch Template의 user_data로 자동 조인하므로
-# Ansible은 마스터 노드 설정만 담당합니다.
-- name: K3s 마스터 노드 설정
+- name: Configure K3s masters
   hosts: masters
+  serial: 1
   become: yes
   roles:
     - k3s_master
-

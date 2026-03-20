@@ -1,28 +1,33 @@
+variable "aws_region" {
+  description = "AWS region for compute resources."
+  type        = string
+  default     = "ap-northeast-2"
+}
+
+variable "network_state_path" {
+  description = "Local path to the network terraform state file."
+  type        = string
+  default     = "../network/terraform.tfstate"
+}
+
 variable "cluster_name" {
-  description = "K3s 클러스터의 이름 및 Autoscaler 태그용 변수"
+  description = "K3s cluster name used by Cluster Autoscaler."
   type        = string
   default     = "8team-cluster"
 }
 
 variable "k3s_shared_token" {
-  description = "K3s 마스터-워커 노드 간 조인을 위한 고정 보안 토큰"
+  description = "Shared token used by K3s servers and agents."
   type        = string
   sensitive   = true
 }
 
-# ──────────────────────────────────────────
-# 마스터 노드 고정 프라이빗 IP
-# 각 서브넷 CIDR 범위 안에서 지정 (예: 10.0.1.0/24 → 10.0.1.10)
-# AWS 예약 대역(.0/.1/.2/.3/.255) 제외
-# ──────────────────────────────────────────
 variable "master_a_private_ip" {
-  description = "AZ-A 마스터 노드 고정 프라이빗 IP (private_subnet_a CIDR 내)"
+  description = "Static private IP for the primary K3s server in subnet A."
   type        = string
-  # default   = "10.0.1.10"  # 서브넷 CIDR 확인 후 주석 해제
 }
 
 variable "master_c_private_ip" {
-  description = "AZ-C 마스터 노드 고정 프라이빗 IP (private_subnet_c CIDR 내)"
+  description = "Static private IP for the secondary K3s server in subnet C."
   type        = string
-  # default   = "10.0.3.10"  # 서브넷 CIDR 확인 후 주석 해제
 }

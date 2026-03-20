@@ -1,15 +1,28 @@
-이 폴더는 생성된 서버에 K3s를 설치하고 운영 도구를 배포합니다.
-
-```markdown
 # K3s Cluster Automation (Ansible)
 
-Terraform으로 생성된 노드들에 K3s 마스터 및 에이전트를 설치합니다.
+Ansible is used for control-plane bootstrap and shared cluster setup on the AWS compute layer.
 
-## 🔐 보안 (Ansible Vault)
-* `vault/vault.yml`에는 K3s 조인 토큰 등 민감 정보가 암호화되어 있습니다.
-* **주의**: `vault_password` 파일은 절대 Git에 커밋하지 마세요 (현재 `.gitignore` 적용됨).
+## Current Scope
 
-## 📝 실행 방법
+- `playbooks/setup_k3s_cluster.yml`
+  - bootstraps the K3s control-plane nodes
+  - runs serially across the `masters` group
+- worker nodes are currently joined through Terraform launch template `user_data`
+- operational access is expected through AWS SSM Session Manager
+
+## Inventory
+
+- Terraform writes the generated inventory to `infra/ansible/inventory/hosts.ini`
+- the current inventory must at least contain the `masters` group before running the playbook
+
+## Secrets
+
+- the current bootstrap flow reads `k3s_shared_token` from the generated inventory
+- `vault/vault.yml` is kept only as an optional placeholder for future Ansible Vault usage
+- if the team later decides to use Ansible Vault, pass `--vault-password-file` explicitly at runtime
+
+## Run
+
 ```bash
-# 전체 클러스터 구축
-ansible-playbook -i inventory/hosts.ini setup_k3s_cluster.yml --vault-password-file vault/vault_password
+ansible-playbook -i inventory/hosts.ini playbooks/setup_k3s_cluster.yml
+```

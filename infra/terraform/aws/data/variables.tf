@@ -4,14 +4,16 @@ variable "name_prefix" {
   default     = "ktcloud2nd-dev"
 }
 
-variable "db_subnet_ids" {
-  description = "Private DB subnet IDs from the network module."
-  type        = list(string)
+variable "aws_region" {
+  description = "AWS region for data layer resources."
+  type        = string
+  default     = "ap-northeast-2"
 }
 
-variable "vpc_security_group_ids" {
-  description = "Security group IDs for the RDS instance."
-  type        = list(string)
+variable "network_state_path" {
+  description = "Local path to the network terraform state file."
+  type        = string
+  default     = "../network/terraform.tfstate"
 }
 
 variable "db_name" {

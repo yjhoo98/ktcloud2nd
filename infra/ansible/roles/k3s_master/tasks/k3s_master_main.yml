@@ -1,48 +1,62 @@
-# 1. K3s 마스터 설치 (고정 토큰 적용)
-- name: K3s 마스터 노드 설치
+---
+- name: Install primary K3s server
   shell: |
     curl -sfL https://get.k3s.io | sh -s - server \
-    --write-kubeconfig-mode 644 \
-    --tls-san {{ ansible_host }} \
-    --token "{{ vault_k3s_shared_token }}"
+      --cluster-init \
+      --write-kubeconfig-mode 644 \
+      --node-ip {{ private_ip }} \
+      --advertise-address {{ private_ip }} \
+      --tls-san {{ nlb_dns }} \
+      --token "{{ k3s_shared_token }}"
   args:
     creates: /usr/local/bin/k3s
+  when: inventory_hostname == groups['masters'][0]
 
-# 2. API 서버 준비 대기 (매우 중요)
-- name: K3s API 서버 대기
+- name: Install secondary K3s server
+  shell: |
+    curl -sfL https://get.k3s.io | sh -s - server \
+      --server https://{{ hostvars[groups['masters'][0]].private_ip }}:6443 \
+      --write-kubeconfig-mode 644 \
+      --node-ip {{ private_ip }} \
+      --advertise-address {{ private_ip }} \
+      --tls-san {{ nlb_dns }} \
+      --token "{{ k3s_shared_token }}"
+  args:
+    creates: /usr/local/bin/k3s
+  when: inventory_hostname != groups['masters'][0]
+
+- name: Wait for local K3s API
   wait_for:
     port: 6443
     delay: 10
 
-# 3. Helm 설치
-- name: Helm 설치 스크립트 실행
+- name: Install Helm
   shell: curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
   args:
     creates: /usr/local/bin/helm
+  when: inventory_hostname == groups['masters'][0]
 
-# 4. Helm Ansible 모듈 설치
-- name: Helm Ansible 모듈을 위한 Python 패키지 설치
+- name: Install Python packages for Helm modules
   apt:
     name:
       - python3-pip
       - python3-kubernetes
     state: present
     update_cache: yes
+  when: inventory_hostname == groups['masters'][0]
 
-# 5.repo 추가 task 선행 필요
-- name: Cluster Autoscaler Helm repo 추가
+- name: Add Cluster Autoscaler Helm repo
   kubernetes.core.helm_repository:
     name: autoscaler
     repo_url: https://kubernetes.github.io/autoscaler
+  when: inventory_hostname == groups['masters'][0]
 
-# 6. Cluster Autoscaler 배포
-- name: Cluster Autoscaler 배포
+- name: Deploy Cluster Autoscaler
   kubernetes.core.helm:
     name: cluster-autoscaler
     chart_ref: autoscaler/cluster-autoscaler
     release_namespace: kube-system
     create_namespace: yes
-    # K3s의 설정 파일을 참조하도록 명시
     kubeconfig: /etc/rancher/k3s/k3s.yaml
     values:
       autoDiscovery:
@@ -54,8 +68,9 @@
         v: 4
         cloud-provider: aws
         expander: least-waste
+  when: inventory_hostname == groups['masters'][0]
 
-- name: K3s 마스터 서비스 활성화 및 시작
+- name: Ensure K3s service is enabled
   systemd:
     name: k3s
     state: started

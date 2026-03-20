@@ -1,0 +1,2 @@
+---
+- import_tasks: k3s_worker_main.yml

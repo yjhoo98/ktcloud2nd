@@ -1,7 +1,7 @@
 import csv
 import io
 import os
-from typing import List, Dict, Optional
+from typing import Dict, List, Optional
 
 import boto3
 import psycopg2
@@ -14,7 +14,7 @@ S3_BUCKET = os.getenv("S3_BUCKET", "ktcloud2nd-dev-data")
 RDS_HOST = os.getenv("RDS_HOST")
 RDS_PORT = int(os.getenv("RDS_PORT", "5432"))
 RDS_DB = os.getenv("RDS_DB", "vehicle_db")
-RDS_USER = os.getenv("RDS_USER", "admin")
+RDS_USER = os.getenv("RDS_USER", "dbadmin")
 RDS_PASSWORD = os.getenv("RDS_PASSWORD")
 
 PREFIX_VEHICLE_STATS = "processed/vehicle_stats/"
@@ -27,7 +27,7 @@ def require_env() -> None:
         "RDS_HOST": RDS_HOST,
         "RDS_PASSWORD": RDS_PASSWORD,
     }
-    missing = [k for k, v in required.items() if not v]
+    missing = [key for key, value in required.items() if not value]
     if missing:
         raise ValueError(f"필수 환경변수가 없습니다: {', '.join(missing)}")
 
@@ -52,7 +52,7 @@ def get_latest_object_key(s3, prefix: str) -> Optional[str]:
     if not contents:
         return None
 
-    latest = max(contents, key=lambda x: x["LastModified"])
+    latest = max(contents, key=lambda item: item["LastModified"])
     return latest["Key"]
 
 
@@ -124,7 +124,11 @@ def import_recent_alert(conn, rows: List[Dict[str, str]]) -> None:
         INSERT INTO recent_alert (
             vehicle_id, driver_code, timestamp, alert_type, message
         )
-        VALUES %s;
+        VALUES %s
+        ON CONFLICT (vehicle_id, timestamp, alert_type)
+        DO UPDATE SET
+            driver_code = EXCLUDED.driver_code,
+            message = EXCLUDED.message;
     """
 
     with conn.cursor() as cur:
