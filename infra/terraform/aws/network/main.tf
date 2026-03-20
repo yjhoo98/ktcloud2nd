@@ -1,6 +1,6 @@
 locals {
   public_subnet_roles = ["edge-ops", "edge-public"]
-  private_app_roles   = ["operator-app", "user-app"]
+  private_app_roles   = ["shared-app-a", "shared-app-c"]
   private_db_roles    = ["db-a", "db-c"]
 
   private_app_nat_gateway_index = {

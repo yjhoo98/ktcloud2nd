@@ -22,8 +22,8 @@ This document reflects the current Phase 1 AWS network baseline for the team.
 | --- | --- | --- | --- | --- |
 | Public-A | `ap-northeast-2a` | `10.0.0.0/24` | ALB, NAT Gateway | IGW |
 | Public-C | `ap-northeast-2c` | `10.0.1.0/24` | ALB | IGW |
-| Private-App-A | `ap-northeast-2a` | `10.0.10.0/24` | Operator-facing app subnet, K3s master 1 + worker 1 | NAT-1 |
-| Private-App-C | `ap-northeast-2c` | `10.0.11.0/24` | User-facing app subnet, worker 2 nodes | NAT-1 |
+| Private-App-A | `ap-northeast-2a` | `10.0.10.0/24` | Shared app subnet for K3s control-plane and worker pools in AZ-A | NAT-1 |
+| Private-App-C | `ap-northeast-2c` | `10.0.11.0/24` | Shared app subnet for K3s control-plane and worker pools in AZ-C | NAT-1 |
 | Private-DB-A | `ap-northeast-2a` | `10.0.20.0/24` | RDS DB subnet group member | Local only |
 | Private-DB-C | `ap-northeast-2c` | `10.0.21.0/24` | RDS DB subnet group member | Local only |
 
@@ -63,6 +63,8 @@ This document reflects the current Phase 1 AWS network baseline for the team.
 - WAF remains a later-phase item and is not part of the current Terraform apply scope.
 - ALB spans both public subnets.
 - Bastion host is removed from the operations baseline. Day-2 access is handled through `SSM Session Manager`.
+- The two Private App subnets are shared application tiers split by AZ, not operator-only or user-only subnets.
+- Infra 2 separates control-plane and worker responsibilities through node placement plus Kubernetes labels and taints, not extra subnet tiers.
 - Infra 2 must attach an EC2 IAM role with `AmazonSSMManagedInstanceCore` to K3s and utility instances that need Session Manager access.
 - SSM traffic uses the existing NAT path for now. Dedicated VPC endpoints for `ssm`, `ssmmessages`, and `ec2messages` can be added later if the team wants a fully private management path.
 - RDS is a single instance, but the DB subnet group still uses two subnets in different AZs.

@@ -1,0 +1,3 @@
+# Optional placeholder for future Ansible Vault usage.
+# The current bootstrap path uses `k3s_shared_token` from the generated inventory.
+vault_k3s_shared_token: "replace-me-and-encrypt-if-you-use-vault"

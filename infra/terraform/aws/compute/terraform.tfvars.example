@@ -1,0 +1,7 @@
+aws_region         = "ap-northeast-2"
+network_state_path = "../network/terraform.tfstate"
+
+cluster_name       = "8team-cluster"
+k3s_shared_token   = "change-me"
+master_a_private_ip = "10.0.10.10"
+master_c_private_ip = "10.0.11.10"

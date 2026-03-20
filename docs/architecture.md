@@ -31,19 +31,20 @@ flowchart LR
 - RDS runs in `Private DB Subnets`
 - S3 access uses a `Gateway VPC Endpoint`
 - Operational access uses `SSM Session Manager`, not a bastion host
-- K3s baseline is `1 master + 3 workers`
+- K3s baseline uses shared `Private App` subnets across two AZs, with control-plane and worker roles separated by node placement plus labels and taints
 - NAT Gateway count is fixed at `1` for the current cost-sensitive baseline
 
 ## Phase 1 AWS Placement
 
 - `Public-A`: ALB, NAT Gateway
 - `Public-C`: ALB
-- `Private-App-A`: K3s master 1, worker 1
-- `Private-App-C`: worker 2 nodes
+- `Private-App-A`: shared application subnet in AZ-A for K3s control-plane and worker node groups
+- `Private-App-C`: shared application subnet in AZ-C for K3s control-plane and worker node groups
 - `Private-DB-A/C`: DB subnet group for a single RDS instance
 - `S3 Gateway Endpoint`: attached to private route tables
 - `RDS`: one instance, with two DB subnets prepared
 - `Operations`: SSM Session Manager through instance IAM role and outbound connectivity
+- `Workload separation`: handled in the cluster layer with node labels and taints rather than separate operator/user subnets
 
 ## AWS Network Baseline
 

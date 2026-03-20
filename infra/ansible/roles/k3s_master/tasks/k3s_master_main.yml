@@ -1,0 +1,77 @@
+---
+- name: Install primary K3s server
+  shell: |
+    curl -sfL https://get.k3s.io | sh -s - server \
+      --cluster-init \
+      --write-kubeconfig-mode 644 \
+      --node-ip {{ private_ip }} \
+      --advertise-address {{ private_ip }} \
+      --tls-san {{ nlb_dns }} \
+      --token "{{ k3s_shared_token }}"
+  args:
+    creates: /usr/local/bin/k3s
+  when: inventory_hostname == groups['masters'][0]
+
+- name: Install secondary K3s server
+  shell: |
+    curl -sfL https://get.k3s.io | sh -s - server \
+      --server https://{{ hostvars[groups['masters'][0]].private_ip }}:6443 \
+      --write-kubeconfig-mode 644 \
+      --node-ip {{ private_ip }} \
+      --advertise-address {{ private_ip }} \
+      --tls-san {{ nlb_dns }} \
+      --token "{{ k3s_shared_token }}"
+  args:
+    creates: /usr/local/bin/k3s
+  when: inventory_hostname != groups['masters'][0]
+
+- name: Wait for local K3s API
+  wait_for:
+    port: 6443
+    delay: 10
+
+- name: Install Helm
+  shell: curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+  args:
+    creates: /usr/local/bin/helm
+  when: inventory_hostname == groups['masters'][0]
+
+- name: Install Python packages for Helm modules
+  apt:
+    name:
+      - python3-pip
+      - python3-kubernetes
+    state: present
+    update_cache: yes
+  when: inventory_hostname == groups['masters'][0]
+
+- name: Add Cluster Autoscaler Helm repo
+  kubernetes.core.helm_repository:
+    name: autoscaler
+    repo_url: https://kubernetes.github.io/autoscaler
+  when: inventory_hostname == groups['masters'][0]
+
+- name: Deploy Cluster Autoscaler
+  kubernetes.core.helm:
+    name: cluster-autoscaler
+    chart_ref: autoscaler/cluster-autoscaler
+    release_namespace: kube-system
+    create_namespace: yes
+    kubeconfig: /etc/rancher/k3s/k3s.yaml
+    values:
+      autoDiscovery:
+        clusterName: "8team-cluster"
+      awsRegion: "ap-northeast-2"
+      rbac:
+        create: true
+      extraArgs:
+        v: 4
+        cloud-provider: aws
+        expander: least-waste
+  when: inventory_hostname == groups['masters'][0]
+
+- name: Ensure K3s service is enabled
+  systemd:
+    name: k3s
+    state: started
+    enabled: yes
