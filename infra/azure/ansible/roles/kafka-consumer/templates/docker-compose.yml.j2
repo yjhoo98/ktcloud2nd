@@ -20,6 +20,8 @@ services:
     ports:
       - "8083:8083"
     environment:
+      KAFKA_HEAP_OPTS: "-Xmx512M -Xms512M"
+
       CONNECT_BOOTSTRAP_SERVERS: "{{ hostvars[groups['azure_broker'][0]]['ansible_host'] }}:9092"
       CONNECT_REST_ADVERTISED_HOST_NAME: "kafka-connect"
       CONNECT_REST_PORT: 8083
