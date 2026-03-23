@@ -38,14 +38,14 @@
     body:
       name: "azure-blob-raw-sink"
       config:
-        connector.class: "io.confluent.connect.azure.blob.storage.AzureBlobStorageSinkConnector"
+        connector.class: "io.confluent.connect.azure.blob.AzureBlobStorageSinkConnector"
         tasks.max: "1"
         topics: "raw_topic"
         # Azure 스토리지 정보 (Terraform Output에서 넘어온 변수 활용)
         azblob.account.name: "{{ azure_storage_account_name }}"
         azblob.account.key: "{{ azure_storage_primary_key }}"
         azblob.container.name: "raw-topic-container"
-        format.class: "io.confluent.connect.azure.blob.storage.format.avro.AvroFormat" # 원본 보존용 Avro
+        format.class: "io.confluent.connect.azure.blob.format.avro.AvroFormat" # 원본 보존용 Avro
         flush.size: "100"
     status_code: [201, 409] # 409는 이미 존재할 경우 무시
   register: connect_result
