@@ -28,17 +28,20 @@
 
 - name: Azure Blob 커넥터 다운로드 및 압축 해제
   unarchive:
-    src: "https://api.hub.confluent.io/api/plugins/confluentinc/kafka-connect-azure-blob-storage/versions/2.5.3/archive"
+    # Confluent Hub 직접 다운로드 링크
+    src: "https://d1i4a15mxbx7e5.cloudfront.net/plugins/confluentinc-kafka-connect-azure-blob-storage-2.5.3.zip"
     dest: "/home/{{ ansible_user }}/consumer-app/plugins"
     remote_src: yes
-    creates: "/home/{{ ansible_user }}/consumer-app/plugins/confluentinc-kafka-connect-azure-blob-storage"
+    # 실제 압축 풀리는 폴더명 확인 필요
+    creates: "/home/{{ ansible_user }}/consumer-app/plugins/confluentinc-kafka-connect-azure-blob-storage-2.5.3"
 
 - name: S3 커넥터 다운로드 및 압축 해제
   unarchive:
-    src: "https://api.hub.confluent.io/api/plugins/confluentinc/kafka-connect-s3/versions/10.5.0/archive"
+    # Confluent Hub 직접 다운로드 링크
+    src: "https://d1i4a15mxbx7e5.cloudfront.net/plugins/confluentinc-kafka-connect-s3-10.5.0.zip"
     dest: "/home/{{ ansible_user }}/consumer-app/plugins"
     remote_src: yes
-    creates: "/home/{{ ansible_user }}/consumer-app/plugins/confluentinc-kafka-connect-s3"
+    creates: "/home/{{ ansible_user }}/consumer-app/plugins/confluentinc-kafka-connect-s3-10.5.0"
 
 - name: Docker Compose 템플릿 배포
   template:
