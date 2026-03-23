@@ -10,7 +10,7 @@ services:
     working_dir: /app
     command: sh -c "pip install --no-cache-dir -r requirements.txt && python processor.py"
     environment:
-      KAFKA_BROKER: "{{ hostvars[groups['azure_broker'][0]]['ansible_host'] }}:9092"
+      KAFKA_BROKER: "{{ broker_internal_ip }}:9092"
       PYTHONUNBUFFERED: 1
 
   # Kafka Connect
@@ -22,7 +22,7 @@ services:
     environment:
       KAFKA_HEAP_OPTS: "-Xmx512M -Xms512M"
 
-      CONNECT_BOOTSTRAP_SERVERS: "{{ hostvars[groups['azure_broker'][0]]['ansible_host'] }}:9092"
+      CONNECT_BOOTSTRAP_SERVERS: "{{ broker_internal_ip }}:9092"
       CONNECT_REST_ADVERTISED_HOST_NAME: "kafka-connect"
       CONNECT_REST_PORT: 8083
       CONNECT_GROUP_ID: "consumer-connect-cluster"

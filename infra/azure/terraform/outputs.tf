@@ -3,6 +3,11 @@ output "broker_public_ip" {
   value       = azurerm_public_ip.broker_public_ip.ip_address
 }
 
+output "broker_private_ip" {
+  description = "Consumer가 내부망에서 Broker를 찾을 때 쓸 주소"
+  value       = azurerm_network_interface.broker_nic.private_ip_address
+}
+
 output "consumer_public_ip" {
   description = "Consumer VM에 직접 접속하기 위한 공인 IP 주소"
   value       = azurerm_public_ip.consumer_public_ip.ip_address

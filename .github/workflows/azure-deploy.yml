@@ -102,10 +102,12 @@ jobs:
       if: ${{ github.event.inputs.action == 'apply' }}
       run: |
         BROKER_IP=$(terraform output -json broker_public_ip | jq -r .)
+        BROKER_PRIV_IP=$(terraform output -json broker_private_ip | jq -r .)
 
         ansible-playbook -i azure_hosts.ini ../ansible/playbook.yml \
           -e "ansible_ssh_common_args='-o StrictHostKeyChecking=no'" \
           -e "broker_public_ip=${BROKER_IP}" \
+          -e "broker_internal_ip=${BROKER_PRIV_IP}" \
           -e "aws_access_key=${{ secrets.AWS_ACCESS_KEY_ID }}" \
           -e "aws_secret_key=${{ secrets.AWS_SECRET_ACCESS_KEY }}" \
           -e "aws_region=${{ vars.AWS_REGION }}" \
