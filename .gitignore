@@ -15,6 +15,6 @@ Thumbs.db
 terraform.tfvars
 !*.tfvars.example
 *.pem
-infra/ansible/inventory/hosts.ini
-infra/ansible/vault/vault_password
-/test
+infra/aws/ansible/inventory/hosts.ini
+infra/aws/ansible/vault/vault_pass
+infra/aws/ansible/vault/vault.yml

@@ -3,5 +3,7 @@
   hosts: masters
   serial: 1
   become: yes
+  vars_files:
+    - ../vault/vault.yml
   roles:
     - k3s_master
