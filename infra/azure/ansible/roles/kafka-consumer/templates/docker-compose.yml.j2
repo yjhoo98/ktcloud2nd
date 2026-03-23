@@ -49,18 +49,5 @@ services:
       AWS_SECRET_ACCESS_KEY: "{{ aws_secret_key }}"
       AWS_REGION: "{{ aws_region }}"
 
-    command: 
-      - bash
-      - -c
-      - |
-        # echo "Installing Azure Blob and S3 connectors..."
-        
-        # Azure Blob Storage용 플러그인 추가
-        # confluent-hub install --no-prompt confluentinc/kafka-connect-azure-blob-storage:2.5.3
-        
-        # AWS S3용 플러그인
-        # confluent-hub install --no-prompt confluentinc/kafka-connect-s3:10.5.0
-        
-        echo "Launching Kafka Connect..."
-        /etc/confluent/docker/run
+    command: /etc/confluent/docker/run
     restart: always

@@ -27,9 +27,20 @@
     - { src: 'Dockerfile.j2', dest: 'Dockerfile' }
     - { src: 'docker-compose.yml.j2', dest: 'docker-compose.yml' }
 
-- name: "커스텀 이미지 빌드 및 모든 컨테이너 실행"
+- name: "커스텀 이미지 빌드 (BuildKit 네트워크 호스트 강제)"
   shell:
-    cmd: "docker compose up -d --build"
+    # cmd와 chdir을 분리
+    cmd: "docker compose build --no-cache --pull"
+    chdir: "/home/{{ ansible_user }}/consumer-app"
+  become: yes
+  environment:
+    # 이 설정이 있어야 빌드 프로세스가 VM의 8.8.8.8 DNS를 인식
+    DOCKER_BUILDKIT: "1"
+    BUILDKIT_STEP_LOG_MAX_SIZE: "10000000"
+
+- name: "컨테이너 실행"
+  shell:
+    cmd: "docker compose up -d"
     chdir: "/home/{{ ansible_user }}/consumer-app"
   become: yes
 

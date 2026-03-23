@@ -1,21 +1,21 @@
-# 베이스 이미지 (풀버전)
 FROM confluentinc/cp-kafka-connect:7.5.0
 
-# unzip 설치를 위해 임시로 root 권한 획득
 USER root
+ENV DEBIAN_FRONTEND=noninteractive
 
-# apt 패키지 매니저 업데이트 및 unzip 설치
+# 패키지 설치 및 불필요한 파일 삭제 (정석)
 RUN apt-get update && \
     apt-get install -y --no-install-recommends unzip && \
-    rm -rf /var/lib/apt/lists/* # 설치 후 캐시 삭제로 이미지 용량 최적화
+    rm -rf /var/lib/apt/lists/*
 
-# 필수 커넥터 미리 설치 (빌드 시점)
-# S3(10.5.0)와 Azure(2.5.3) 버전을 명시하여 라이선스 충돌 방지
+# 플러그인 설치 경로 미리 생성 및 권한 부여 (실무 팁)
+RUN mkdir -p /usr/share/confluent-hub-components && \
+    chown -R appuser:appuser /usr/share/confluent-hub-components
+
+# 설치는 다시 일반 사용자로 진행 (보안 및 파일 소유권 일치)
+USER appuser
+
 RUN confluent-hub install --no-prompt confluentinc/kafka-connect-azure-blob-storage:2.5.3 && \
     confluent-hub install --no-prompt confluentinc/kafka-connect-s3:10.5.0
 
-# 다시 기본 사용자로 돌아가기 (보안 유지)
-USER appuser
-
-# 실행 명령 (기본값 유지)
 CMD ["/etc/confluent/docker/run"]
