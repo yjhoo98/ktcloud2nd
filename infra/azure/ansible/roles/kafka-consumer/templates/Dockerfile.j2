@@ -1,18 +1,29 @@
-# Dockerfile.j2
 FROM confluentinc/cp-kafka-connect:7.5.0
 
 USER root
+# 압축 해제를 위한 unzip 설치
+RUN microdnf update && microdnf install -y unzip && microdnf clean all
 
-# 플러그인 루트 경로 생성
-RUN mkdir -p /usr/share/confluent-hub-components && \
-    chown -R appuser:appuser /usr/share/confluent-hub-components
+# zip 파일들을 컨테이너 임시 폴더로 복사
+# confluentinc-kafka-connect-azure-blob-storage-2.1.2
+# confluentinc-kafka-connect-s3-10.5.0
+COPY azure-part1.zip azure-part2.zip s3.zip /tmp/
 
-# 워크플로우에서 준비한 plugins 폴더 통째로 복사
-COPY --chown=appuser:appuser plugins/ /usr/share/confluent-hub-components/
+# 플러그인 폴더 생성 및 압축 해제
+# azure-part1과 part2를 똑같은 경로에 풀어 파일 합치기
+RUN mkdir -p /usr/share/confluent-hub-components/azure-blob && \
+    mkdir -p /usr/share/confluent-hub-components/s3 && \
+    unzip /tmp/azure-part1.zip -d /usr/share/confluent-hub-components/azure-blob && \
+    unzip /tmp/azure-part2.zip -d /usr/share/confluent-hub-components/azure-blob && \
+    unzip /tmp/s3.zip -d /usr/share/confluent-hub-components/s3 && \
+    rm /tmp/*.zip
+
+# 권한 정리
+RUN chown -R appuser:appuser /usr/share/confluent-hub-components
 
 USER appuser
 
-# 플러그인 경로를 루트로 잡아주면 하위 폴더들을 알아서 탐색합니다.
+# Kafka Connect가 플러그인을 인식하도록 경로 설정
 ENV CONNECT_PLUGIN_PATH="/usr/share/java,/usr/share/confluent-hub-components"
 
 CMD ["/etc/confluent/docker/run"]

@@ -31,16 +31,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # 도커 빌드 전, 호스트(GitHub 서버)에서 직접 플러그인 준비
-      - name: Prepare Plugins
+      # 로컬에 준비한 쪼개진 ZIP 파일들이 잘 있는지 확인
+      - name: Check Prepared Plugins
         run: |
-          mkdir -p ./plugins/azure-blob
-          mkdir -p ./plugins/s3
-          curl -L -o azure.zip https://api.hub.confluent.io/api/plugins/confluentinc/kafka-connect-azure-blob-storage/versions/2.5.3/archive
-          curl -L -o s3.zip https://api.hub.confluent.io/api/plugins/confluentinc/kafka-connect-s3/versions/10.5.0/archive
-          unzip azure.zip -d ./plugins/azure-blob
-          unzip s3.zip -d ./plugins/s3
-          cp -r ./plugins ./infra/azure/ansible/roles/kafka-consumer/templates/
+          ls -lh ./infra/azure/ansible/roles/kafka-consumer/templates/*.zip
 
       - name: Login to Docker Hub
         uses: docker/login-action@v2

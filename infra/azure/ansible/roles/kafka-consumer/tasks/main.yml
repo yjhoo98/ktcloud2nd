@@ -11,7 +11,6 @@
   loop:
     - processor.py
     - requirements.txt
-  ignore_errors: yes
 
 - name: "Docker Compose 파일 배포"
   template:
@@ -34,7 +33,7 @@
 
 - name: Kafka Connect 서비스 안정화 대기
   pause:
-    seconds: 60
+    seconds: 30
     prompt: "Consumer 앱과 Connector가 완전히 뜰 때까지 기다립니다."
 
 - name: "Azure Blob Storage Sink 커넥터 설정 (Raw Data)"
@@ -51,20 +50,19 @@
         key.converter: "org.apache.kafka.connect.storage.StringConverter"
         value.converter: "org.apache.kafka.connect.json.JsonConverter"
         value.converter.schemas.enable: "false"
-        # Broker 주소 추가
         confluent.topic.bootstrap.servers: "{{ broker_internal_ip }}:9094,{{ broker_internal_ip }}:9095,{{ broker_internal_ip }}:9096"
-        # Azure 스토리지 정보 (Terraform Output에서 넘어온 변수 활용)
+        # Azure 설정
         azblob.account.name: "{{ azure_storage_account_name }}"
         azblob.account.key: "{{ azure_storage_primary_key }}"
         azblob.container.name: "raw-topic-container"
-        format.class: "io.confluent.connect.azure.blob.format.avro.AvroFormat" # 원본 보존용 Avro
+        storage.class: "io.confluent.connect.azure.blob.storage.AzureBlobStorage"
+        format.class: "io.confluent.connect.azure.blob.format.json.JsonFormat" # JSON으로 통일 권장
         flush.size: "100"
-    status_code: [201, 409] # 409는 이미 존재할 경우 무시
+    status_code: [201, 409]
   register: connect_result
-  # 연결 실패나 500 에러가 나더라도 성공할 때까지 반복
   until: "connect_result.status is defined and (connect_result.status == 201 or connect_result.status == 409)"
-  retries: 20 # 최대 20번 시도
-  delay: 15   # 15초 간격으로 (총 5분 동안 대기하며 확인)
+  retries: 20
+  delay: 15
 
 - name: "AWS S3 Sink 커넥터 설정 (Cleansed Data)"
   uri:
