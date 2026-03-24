@@ -34,12 +34,6 @@ variable "network_state_secret_key" {
   sensitive   = true
 }
 
-variable "data_state_path" {
-  description = "Local path to the data terraform state file."
-  type        = string
-  default     = "../data/terraform.tfstate"
-}
-
 variable "cluster_name" {
   description = "K3s cluster name used by Cluster Autoscaler."
   type        = string
@@ -60,28 +54,4 @@ variable "master_a_private_ip" {
 variable "master_c_private_ip" {
   description = "Static private IP for the secondary K3s server in subnet C."
   type        = string
-}
-
-variable "name_prefix" {
-  description = "Prefix used for naming all AWS resources in this module."
-  type        = string
-  default     = "ktcloud2nd-dev"
-}
-
-variable "ami_id" {
-  description = "AMI ID for K3s nodes (Ubuntu 22.04 ap-northeast-2)."
-  type        = string
-  default     = "ami-084a56dceed3eb9bb"
-}
-
-variable "instance_type" {
-  description = "EC2 instance type for K3s master and worker nodes."
-  type        = string
-  default     = "t3.small"
-}
-
-variable "key_name" {
-  description = "EC2 key pair name for SSH access to K3s nodes."
-  type        = string
-  default     = "infra"
 }
