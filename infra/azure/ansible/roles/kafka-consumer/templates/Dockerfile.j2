@@ -1,23 +1,25 @@
 # 1. 베이스 이미지
 FROM confluentinc/cp-kafka-connect:7.5.0
 
-# 2. 패키지 설치 및 폴더 준비를 위해 임시로 root 권한 획득
+# 2. 모든 설치 작업을 root로 진행 (확실한 권한 확보)
 USER root
 
-# RedHat 계열(UBI) 패키지 매니저 사용
+# 패키지 설치 및 디렉토리 준비
 RUN microdnf update && \
     microdnf install -y unzip && \
     microdnf clean all && \
-    # 핵심: 플러그인이 설치될 경로를 미리 만들고 appuser에게 소유권을 넘깁니다.
-    mkdir -p /usr/share/confluent-hub-components && \
-    chown -R appuser:appuser /usr/share/confluent-hub-components
+    mkdir -p /usr/share/confluent-hub-components
 
-# 3. 다시 기본 사용자(appuser)로 돌아가기 (보안 및 설치 권한 일치)
+# 3. 커넥터 설치 (root 권한으로 실행하여 실패 가능성 제거)
+# --component-dir 옵션을 주어 경로를 명시합니다.
+RUN confluent-hub install --no-prompt --component-dir /usr/share/confluent-hub-components confluentinc/kafka-connect-azure-blob-storage:2.5.3 && \
+    confluent-hub install --no-prompt --component-dir /usr/share/confluent-hub-components confluentinc/kafka-connect-s3:10.5.0
+
+# 4. 설치된 모든 파일의 권한을 appuser에게 일괄 부여 (보안 최적화)
+RUN chown -R appuser:appuser /usr/share/confluent-hub-components /etc/kafka-connect
+
+# 5. 최종 실행은 다시 기본 사용자(appuser)로 설정
 USER appuser
-
-# 4. 커넥터 설치 (이제 내 집처럼 편하게 설치 가능)
-RUN confluent-hub install --no-prompt confluentinc/kafka-connect-azure-blob-storage:2.5.3 && \
-    confluent-hub install --no-prompt confluentinc/kafka-connect-s3:10.5.0
 
 # 실행 명령
 CMD ["/etc/confluent/docker/run"]
