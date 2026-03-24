@@ -1,21 +1,21 @@
-# 베이스 이미지
+# 1. 베이스 이미지
 FROM confluentinc/cp-kafka-connect:7.5.0
 
-# 루트 권한으로 필요한 도구 설치 및 폴더 준비
+# 2. 패키지 설치 및 폴더 준비를 위해 임시로 root 권한 획득
 USER root
 
-# RedHat 계열 패키지 설치 및 설치 경로 강제 생성/권한 부여
+# RedHat 계열(UBI) 패키지 매니저 사용
 RUN microdnf update && \
     microdnf install -y unzip && \
     microdnf clean all && \
-    # 설치 폴더를 미리 만들고 appuser에게 소유권을 넘김
+    # 핵심: 플러그인이 설치될 경로를 미리 만들고 appuser에게 소유권을 넘깁니다.
     mkdir -p /usr/share/confluent-hub-components && \
-    chown -R appuser:appuser /usr/share/confluent-hub-components /etc/kafka-connect/jars
+    chown -R appuser:appuser /usr/share/confluent-hub-components
 
-# 다시 일반 사용자(appuser)로 전환
+# 3. 다시 기본 사용자(appuser)로 돌아가기 (보안 및 설치 권한 일치)
 USER appuser
 
-# 커넥터 설치
+# 4. 커넥터 설치 (이제 내 집처럼 편하게 설치 가능)
 RUN confluent-hub install --no-prompt confluentinc/kafka-connect-azure-blob-storage:2.5.3 && \
     confluent-hub install --no-prompt confluentinc/kafka-connect-s3:10.5.0
 
