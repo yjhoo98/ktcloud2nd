@@ -1,34 +1,16 @@
-# 1. 베이스 이미지
 FROM confluentinc/cp-kafka-connect:7.5.0
 
-# 2. 루트 권한으로 도구 설치 및 폴더 준비
 USER root
 
-# 필수 패키지(curl, unzip) 설치 및 플러그인 경로 생성
-RUN microdnf update && \
-    microdnf install -y unzip curl && \
-    microdnf clean all && \
-    mkdir -p /usr/share/confluent-hub-components
+# 플러그인 경로 생성 및 권한 부여
+RUN mkdir -p /usr/share/confluent-hub-components && \
+    chown -R appuser:appuser /usr/share/confluent-hub-components
 
-# 3. Azure Blob Storage Sink 수동 설치
-# 직접 zip 파일을 받아서 /usr/share/confluent-hub-components에 압축을 풉니다.
-RUN curl -L -o /tmp/azure.zip https://client.hub.confluent.io/plugins/confluentinc/kafka-connect-azure-blob-storage/2.5.3.zip && \
-    unzip /tmp/azure.zip -d /usr/share/confluent-hub-components && \
-    rm /tmp/azure.zip
+# GitHub Actions가 미리 준비해둔 plugins 폴더를 이미지 안으로 복사만 합니다.
+COPY --chown=appuser:appuser plugins/ /usr/share/confluent-hub-components/
 
-# 4. AWS S3 Sink 수동 설치
-RUN curl -L -o /tmp/s3.zip https://client.hub.confluent.io/plugins/confluentinc/kafka-connect-s3/10.5.0.zip && \
-    unzip /tmp/s3.zip -d /usr/share/confluent-hub-components && \
-    rm /tmp/s3.zip
-
-# 5. 모든 파일의 권한을 appuser에게 부여
-RUN chown -R appuser:appuser /usr/share/confluent-hub-components
-
-# 6. 다시 일반 사용자(appuser)로 전환
 USER appuser
 
-# 커넥터가 플러그인을 찾을 수 있도록 경로 설정 확인
 ENV CONNECT_PLUGIN_PATH="/usr/share/java,/usr/share/confluent-hub-components"
 
-# 실행 명령
 CMD ["/etc/confluent/docker/run"]
