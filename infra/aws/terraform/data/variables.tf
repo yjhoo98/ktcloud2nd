@@ -10,10 +10,34 @@ variable "aws_region" {
   default     = "ap-northeast-2"
 }
 
-variable "network_state_path" {
-  description = "Local path to the network terraform state file."
+variable "network_state_bucket" {
+  description = "S3 bucket that stores the network terraform state file."
   type        = string
-  default     = "../network/terraform.tfstate"
+  default     = "8team-terraform-tfstate"
+}
+
+variable "network_state_key" {
+  description = "S3 object key for the network terraform state file."
+  type        = string
+  default     = "network/terraform.tfstate"
+}
+
+variable "network_state_region" {
+  description = "AWS region of the S3 bucket that stores the network terraform state file."
+  type        = string
+  default     = "ap-northeast-2"
+}
+
+variable "network_state_access_key" {
+  description = "Access key used to read the network terraform state from the tfstate S3 account."
+  type        = string
+  sensitive   = true
+}
+
+variable "network_state_secret_key" {
+  description = "Secret key used to read the network terraform state from the tfstate S3 account."
+  type        = string
+  sensitive   = true
 }
 
 variable "db_name" {

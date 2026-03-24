@@ -1,5 +1,9 @@
-aws_region         = "ap-northeast-2"
-network_state_path = "../network/terraform.tfstate"
+aws_region           = "ap-northeast-2"
+network_state_bucket = "8team-terraform-tfstate"
+network_state_key    = "network/terraform.tfstate"
+network_state_region = "ap-northeast-2"
+# network_state_access_key = "change-me"
+# network_state_secret_key = "change-me"
 
 name_prefix = "ktcloud2nd-dev"
 
