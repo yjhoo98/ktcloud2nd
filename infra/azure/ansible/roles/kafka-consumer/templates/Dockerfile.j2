@@ -1,13 +1,18 @@
 FROM confluentinc/cp-kafka-connect:7.5.0
 
 USER root
-RUN microdnf update && microdnf install -y unzip && microdnf clean all
+# 필요한 도구 설치 (unzip, wget)
+RUN microdnf update && microdnf install -y unzip wget && microdnf clean all
 
-# Azure만 Aiven ZIP으로 수동 설치 (라이선스 에러 회피용)
-COPY aiven-azure-blob.zip /tmp/
+# Aiven 커넥터 자동 다운로드 (v0.9.0 기준)
+RUN wget https://github.com/aiven/azure-blob-storage-kafka-connector/releases/download/v0.9.0/aiven-kafka-connect-azure-blob-storage-0.9.0.zip -O /tmp/azure-aiven.zip
+
+# 압축 해제 및 배치
 RUN mkdir -p /usr/share/confluent-hub-components/azure-blob-aiven/lib && \
-    unzip -o -j /tmp/aiven-azure-blob.zip "*/lib/*.jar" -d /usr/share/confluent-hub-components/azure-blob-aiven/lib/
+    unzip -o -j /tmp/azure-aiven.zip "*/lib/*.jar" -d /usr/share/confluent-hub-components/azure-blob-aiven/lib/
 
-RUN chown -R appuser:appuser /usr/share/confluent-hub-components && rm /tmp/*.zip
+# 권한 정리 및 임시파일 삭제
+RUN chown -R appuser:appuser /usr/share/confluent-hub-components && \
+    rm /tmp/azure-aiven.zip
 
 USER appuser
