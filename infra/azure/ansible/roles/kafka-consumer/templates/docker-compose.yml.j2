@@ -14,10 +14,7 @@ services:
       KAFKA_BROKER: "{{ broker_internal_ip }}:9094"
   # Kafka Connect
   kafka-connect:
-    # image: confluentinc/cp-kafka-connect:7.5.0
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: {{ dockerhub_username }}/custom-kafka-connect:latest # confluentinc/cp-kafka-connect:7.5.0
     container_name: kafka-connect
     ports:
       - "8083:8083"

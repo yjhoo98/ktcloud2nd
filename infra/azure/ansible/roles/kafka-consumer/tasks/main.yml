@@ -19,27 +19,21 @@
     - requirements.txt
   ignore_errors: yes
 
-- name: Dockerfile 및 Docker Compose 템플릿 배포
+- name: "Docker Compose 파일 배포"
   template:
-    src: "{{ item.src }}"
-    dest: "/home/{{ ansible_user }}/consumer-app/{{ item.dest }}"
-  loop:
-    - { src: 'Dockerfile.j2', dest: 'Dockerfile' }
-    - { src: 'docker-compose.yml.j2', dest: 'docker-compose.yml' }
+    src: docker-compose.yml.j2
+    dest: "/home/{{ ansible_user }}/consumer-app/docker-compose.yml"
 
-- name: "커스텀 이미지 빌드 (BuildKit 네트워크 호스트 강제)"
+- name: "최신 이미지 풀(Pull) 받기"
   shell:
-    # cmd와 chdir을 분리
-    cmd: "docker compose build --no-cache --pull"
+    # 빌드 서버(GitHub Actions)가 올려둔 이미지를 내려받음
+    cmd: "docker compose pull"
     chdir: "/home/{{ ansible_user }}/consumer-app"
   become: yes
-  environment:
-    # 이 설정이 있어야 빌드 프로세스가 VM의 8.8.8.8 DNS를 인식
-    DOCKER_BUILDKIT: "1"
-    BUILDKIT_STEP_LOG_MAX_SIZE: "10000000"
 
 - name: "컨테이너 실행"
   shell:
+    # 이미지가 이미 있으므로 빌드 없이 바로 실행
     cmd: "docker compose up -d"
     chdir: "/home/{{ ansible_user }}/consumer-app"
   become: yes
