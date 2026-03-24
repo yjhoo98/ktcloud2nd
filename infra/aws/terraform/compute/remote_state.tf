@@ -9,3 +9,11 @@ data "terraform_remote_state" "network" {
     secret_key = var.network_state_secret_key
   }
 }
+
+data "terraform_remote_state" "data" {
+  backend = "local"
+
+  config = {
+    path = var.data_state_path
+  }
+}

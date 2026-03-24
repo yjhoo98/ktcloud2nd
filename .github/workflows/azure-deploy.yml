@@ -23,8 +23,40 @@ env:
   TF_VAR_public_key: ${{ secrets.AZURE_PUBLIC_KEY }}
 
 jobs:
+  build-image:
+    name: 'Build and Push Docker Image'
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.action == 'apply' }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # 로컬에 준비한 쪼개진 ZIP 파일들이 잘 있는지 확인
+      - name: Check Prepared Plugins
+        run: |
+          ls -lh ./infra/azure/ansible/roles/kafka-consumer/templates/*.zip
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and Push Kafka Connect Image
+        uses: docker/build-push-action@v4
+        with:
+          # Dockerfile.j2가 들어있는 경로
+          context: ./infra/azure/ansible/roles/kafka-consumer/templates
+          file: ./infra/azure/ansible/roles/kafka-consumer/templates/Dockerfile.j2
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/custom-kafka-connect:latest
+
   terraform-azure:
     name: 'Terraform Azure'
+    needs: build-image # 빌드가 성공해야 배포 시작
+    if: |
+      github.event.inputs.action == 'destroy' || 
+      (github.event.inputs.action == 'apply' && success())
     runs-on: ubuntu-latest
 
     defaults:
@@ -53,7 +85,6 @@ jobs:
       run: |
         STORAGE_NAME=$(terraform output -json azure_storage_account_name | jq -r .)
         STORAGE_KEY=$(terraform output -json azure_storage_primary_key | jq -r .)
-
         echo "AZURE_STORAGE_NAME=${STORAGE_NAME}" >> $GITHUB_ENV
         echo "AZURE_STORAGE_KEY=${STORAGE_KEY}" >> $GITHUB_ENV
 
@@ -105,8 +136,7 @@ jobs:
         BROKER_PRIV_IP=$(terraform output -json broker_private_ip | jq -r .)
 
         ansible-playbook -i azure_hosts.ini ../ansible/playbook.yml \
-          -e "ansible_ssh_common_args='-o StrictHostKeyChecking=no'" \
-          -e "broker_public_ip=${BROKER_IP}" \
+          -e "dockerhub_username=${{ secrets.DOCKERHUB_USERNAME }}" \
           -e "broker_internal_ip=${BROKER_PRIV_IP}" \
           -e "aws_access_key=${{ secrets.AWS_ACCESS_KEY_ID }}" \
           -e "aws_secret_key=${{ secrets.AWS_SECRET_ACCESS_KEY }}" \
