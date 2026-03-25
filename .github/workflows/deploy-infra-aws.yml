@@ -175,9 +175,17 @@ jobs:
           -backend-config="access_key=${{ secrets.AWS_TFSTATE_S3_ACCESS_KEY }}"
           -backend-config="secret_key=${{ secrets.AWS_TFSTATE_S3_SECRET_ACCESS_KEY }}"
 
-      - name: Data S3 버킷 import (state에 없을 때만 실행)
+      - name: Data S3 버킷 import (state에 없고 AWS에 이미 존재할 때만 실행)
         working-directory: ${{ github.workspace }}/infra/aws/terraform/data
-        run: terraform state show aws_s3_bucket.this > /dev/null 2>&1 || terraform import aws_s3_bucket.this ktcloud2nd-dev-data
+        run: |
+          if terraform state show aws_s3_bucket.this > /dev/null 2>&1; then
+            echo "이미 state에 존재 - import 생략"
+          elif aws s3api head-bucket --bucket ktcloud2nd-dev-data 2>/dev/null; then
+            echo "AWS에 버킷 존재 - import 실행"
+            terraform import aws_s3_bucket.this ktcloud2nd-dev-data
+          else
+            echo "버킷 미존재 - terraform apply에서 신규 생성"
+          fi
 
       - name: Data Apply
         working-directory: ${{ github.workspace }}/infra/aws/terraform/data
@@ -255,9 +263,12 @@ jobs:
 
       - name: EC2 SSM 등록 대기 (최대 3분)
         run: |
+          MASTER_A=$(grep 'master_a' infra/aws/ansible/inventory/hosts.ini | grep -oP 'ansible_host=\K[^\s]+')
+          MASTER_C=$(grep 'master_c' infra/aws/ansible/inventory/hosts.ini | grep -oP 'ansible_host=\K[^\s]+')
+          echo "대기 대상 인스턴스: $MASTER_A $MASTER_C"
           for i in $(seq 1 18); do
-            COUNT=$(aws ssm describe-instance-information --query 'InstanceInformationList[?PingStatus==`Online`]' --output json | python3 -c "import sys,json; print(len(json.load(sys.stdin)))")
-            echo "SSM 온라인 인스턴스: $COUNT"
+            COUNT=$(aws ssm describe-instance-information --filters "Key=InstanceIds,Values=${MASTER_A},${MASTER_C}" --query 'InstanceInformationList[?PingStatus==`Online`]' --output json | python3 -c "import sys,json; print(len(json.load(sys.stdin)))")
+            echo "SSM 온라인 인스턴스: $COUNT / 2"
             if [ "$COUNT" -ge 2 ]; then exit 0; fi
             sleep 10
           done

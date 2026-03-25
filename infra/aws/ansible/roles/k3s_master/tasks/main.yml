@@ -34,7 +34,7 @@
   run_once: true
 
 - name: autoscaler Helm repo 추가
-  command: helm repo add autoscaler https://kubernetes.github.io/autoscaler
+  command: helm repo add autoscaler https://kubernetes.github.io/autoscaler --force-update
   environment:
     KUBECONFIG: /etc/rancher/k3s/k3s.yaml
   run_once: true
