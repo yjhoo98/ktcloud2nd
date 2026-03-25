@@ -18,6 +18,15 @@
     mode: '0755'
   run_once: true
 
+- name: Linkerd 네임스페이스 존재 여부 확인
+  command: kubectl get namespace linkerd
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  run_once: true
+  register: linkerd_ns_check
+  failed_when: false
+  changed_when: false
+
 - name: Linkerd 사전 점검 (pre-check)
   command: linkerd check --pre
   environment:
@@ -25,18 +34,21 @@
   run_once: true
   register: linkerd_precheck
   failed_when: linkerd_precheck.rc != 0
+  when: linkerd_ns_check.rc != 0
 
 - name: Linkerd CRD 설치
   shell: linkerd install --crds | kubectl apply -f -
   environment:
     KUBECONFIG: /etc/rancher/k3s/k3s.yaml
   run_once: true
+  when: linkerd_ns_check.rc != 0
 
 - name: Linkerd 컨트롤 플레인 설치
   shell: linkerd install | kubectl apply -f -
   environment:
     KUBECONFIG: /etc/rancher/k3s/k3s.yaml
   run_once: true
+  when: linkerd_ns_check.rc != 0
 
 - name: Linkerd 컨트롤 플레인 준비 완료 대기 (최대 5분)
   command: linkerd check
