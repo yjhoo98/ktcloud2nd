@@ -38,14 +38,23 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      # Kafka Connect 이미지 빌드
       - name: Build and Push Kafka Connect Image
         uses: docker/build-push-action@v4
         with:
-          # Dockerfile.j2가 들어있는 경로
           context: ./infra/azure/ansible/roles/kafka-consumer/templates
           file: ./infra/azure/ansible/roles/kafka-consumer/templates/Dockerfile.j2
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/custom-kafka-connect:latest
+
+      # 온프레미스 시뮬레이터 이미지 빌드
+      - name: Build and Push On-prem Simulator Image
+        uses: docker/build-push-action@v4
+        with:
+          context: ./infra/on-prem
+          file: ./infra/on-prem/Dockerfile
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/vehicle-simulator:latest
 
   terraform-azure:
     name: 'Terraform Azure'
