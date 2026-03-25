@@ -63,3 +63,31 @@
   until: linkerd_viz_check.rc == 0
   retries: 10
   delay: 30
+
+- name: user-app 네임스페이스 생성 및 Linkerd 주입 활성화
+  shell: |
+    kubectl apply -f - <<EOF
+    apiVersion: v1
+    kind: Namespace
+    metadata:
+      name: user-app
+      annotations:
+        linkerd.io/inject: enabled
+    EOF
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  run_once: true
+
+- name: operator-app 네임스페이스 생성 및 Linkerd 주입 활성화
+  shell: |
+    kubectl apply -f - <<EOF
+    apiVersion: v1
+    kind: Namespace
+    metadata:
+      name: operator-app
+      annotations:
+        linkerd.io/inject: enabled
+    EOF
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  run_once: true
