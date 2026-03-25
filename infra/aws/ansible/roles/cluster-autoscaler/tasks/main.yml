@@ -1,6 +1,6 @@
 ---
 - name: Cluster Autoscaler 배포
-  command: helm upgrade --install cluster-autoscaler autoscaler/cluster-autoscaler --namespace kube-system --set autoDiscovery.clusterName=8team-cluster --set awsRegion=ap-northeast-2
+  command: helm upgrade --install cluster-autoscaler autoscaler/cluster-autoscaler --namespace kube-system --set autoDiscovery.clusterName={{ cluster_name }} --set awsRegion={{ aws_region }}
   environment:
     KUBECONFIG: /etc/rancher/k3s/k3s.yaml
   run_once: true

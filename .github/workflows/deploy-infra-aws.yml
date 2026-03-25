@@ -62,6 +62,7 @@ jobs:
         shell: bash
         run: |
           cp terraform.tfvars.example terraform.tfvars
+          sed -i 's|^db_password *=.*|db_password = "${{ secrets.RDS_PASSWORD }}"|' terraform.tfvars
 
       - name: Network Init
         working-directory: ${{ github.workspace }}/infra/aws/terraform/network
@@ -139,6 +140,7 @@ jobs:
         shell: bash
         run: |
           cp terraform.tfvars.example terraform.tfvars
+          sed -i 's|^db_password *=.*|db_password = "${{ secrets.RDS_PASSWORD }}"|' terraform.tfvars
 
       - name: Network Init
         working-directory: ${{ github.workspace }}/infra/aws/terraform/network
@@ -172,11 +174,14 @@ jobs:
       - name: Data S3 버킷 import (state에 없고 AWS에 이미 존재할 때만 실행)
         working-directory: ${{ github.workspace }}/infra/aws/terraform/data
         run: |
+          NAME_PREFIX=$(grep '^name_prefix' terraform.tfvars | sed 's/.*= *"\(.*\)"/\1/')
+          BUCKET_NAME="${NAME_PREFIX}-data"
+          echo "대상 버킷: $BUCKET_NAME"
           if terraform state show aws_s3_bucket.this > /dev/null 2>&1; then
             echo "이미 state에 존재 - import 생략"
-          elif aws s3api head-bucket --bucket ktcloud2nd-dev-data 2>/dev/null; then
+          elif aws s3api head-bucket --bucket "$BUCKET_NAME" 2>/dev/null; then
             echo "AWS에 버킷 존재 - import 실행"
-            terraform import aws_s3_bucket.this ktcloud2nd-dev-data
+            terraform import aws_s3_bucket.this "$BUCKET_NAME"
           else
             echo "버킷 미존재 - terraform apply에서 신규 생성"
           fi
@@ -196,13 +201,16 @@ jobs:
           DB_PORT=$(terraform -chdir=${{ github.workspace }}/infra/aws/terraform/data output -raw db_port)
           DB_NAME=$(terraform -chdir=${{ github.workspace }}/infra/aws/terraform/data output -raw db_name)
           DB_USERNAME=$(terraform -chdir=${{ github.workspace }}/infra/aws/terraform/data output -raw db_username)
+          CLUSTER_NAME=$(grep '^cluster_name' ${{ github.workspace }}/infra/aws/terraform/compute/terraform.tfvars | sed 's/.*= *"\(.*\)"/\1/')
           mkdir -p ${{ github.workspace }}/infra/aws/ansible/inventory
           INV=${{ github.workspace }}/infra/aws/ansible/inventory/hosts.ini
           printf '[all:vars]\n' > "$INV"
           printf 'ansible_user=ubuntu\n' >> "$INV"
+          printf 'ansible_ssh_private_key_file=~/.ssh/infra.pem\n' >> "$INV"
           printf 'ansible_ssh_common_args='"'"'-o StrictHostKeyChecking=no -o ProxyCommand="aws ssm start-session --target %%h --document-name AWS-StartSSHSession --parameters portNumber=%%p"'"'"'\n' >> "$INV"
+          printf 'cluster_name=%s\n' "$CLUSTER_NAME" >> "$INV"
+          printf 'aws_region=%s\n' "$AWS_REGION" >> "$INV"
           printf 'nlb_dns=%s\n' "$NLB_DNS" >> "$INV"
-          printf 'k3s_shared_token=${{ secrets.K3S_TOKEN }}\n' >> "$INV"
           printf 'db_endpoint=%s\n' "$DB_ENDPOINT" >> "$INV"
           printf 'db_port=%s\n' "$DB_PORT" >> "$INV"
           printf 'db_name=%s\n' "$DB_NAME" >> "$INV"
@@ -253,6 +261,7 @@ jobs:
         shell: bash
         run: |
           cp terraform.tfvars.example terraform.tfvars
+          sed -i 's|^db_password *=.*|db_password = "${{ secrets.RDS_PASSWORD }}"|' terraform.tfvars
 
       - name: Compute Init
         working-directory: ${{ github.workspace }}/infra/aws/terraform/compute
@@ -320,7 +329,7 @@ jobs:
         run: mkdir -p ~/.ssh && printf '%s\n' "${{ secrets.EC2_PRIVATE_KEY }}" > ~/.ssh/infra.pem && chmod 600 ~/.ssh/infra.pem
 
       - name: Vault 비밀번호 파일 생성
-        run: echo "${{ secrets.ANSIBLE_VAULT_PASSWORD }}" > infra/aws/ansible/vault/vault_pass
+        run: echo "${{ secrets.ANSIBLE_VAULT_PASSWORD }}" > infra/aws/ansible/vault/vault_pass && chmod 600 infra/aws/ansible/vault/vault_pass
 
       - name: EC2 SSM 등록 대기 (최대 3분)
         run: |
@@ -337,4 +346,4 @@ jobs:
 
       - name: Ansible Playbook 실행 (K3s + Linkerd + Grafana)
         working-directory: infra/aws/ansible
-        run: ansible-playbook -i inventory/hosts.ini playbooks/setup_k3s_cluster.yml
+        run: ansible-playbook -i inventory/hosts.ini --vault-password-file vault/vault_pass playbooks/setup_k3s_cluster.yml
