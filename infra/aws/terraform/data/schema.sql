@@ -57,20 +57,26 @@ CREATE TABLE IF NOT EXISTS vehicle_alerts (
     -- 식별자
     vehicle_id VARCHAR(50),
 
-    -- 급가속 / 급감속
-    speed INT,
+    -- 이상 종류
+    alert_type VARCHAR(30) NOT NULL,
 
-    -- 연료 소진
-    fuel_level NUMERIC(5,2),
+    -- 심각도 (WARNING, CRITICAL): 그라파나 색상 제어용
+    alert_level VARCHAR(10) DEFAULT 'WARNING',
 
-    -- 비정상 위치 (탐지 방법: 지오펜싱 / 이동 거리 계산)
-    latitude NUMERIC(10, 7),
+    -- 운영자에게 보여줄 상세 메시지
+    alert_message TEXT,
+
+    -- 주요 수치 (알람 발생 당시의 스냅샷)
+    speed INT,                -- 급가속 / 급감속
+    fuel_level NUMERIC(5,2),  -- 연료 소진
+    latitude NUMERIC(10, 7),  -- 비정상 위치
     longitude NUMERIC(10, 7),
 
-    -- 급가속 / 급감속
-    -- 짧은 시간 내 과도한 알림 발생
-    occurred_at TIMESTAMPTZ,
-
-    -- 일정 시간 동안 데이터 미수신
-    received_at TIMESTAMPTZ,
+    -- 발생 / 수신 시각
+    occurred_at TIMESTAMPTZ,  -- 급가속 / 급감속, 짧은 시간 내 과도한 알림 발생
+    received_at TIMESTAMPTZ   -- 일정 시간 동안 데이터 미수신
 );
+
+-- 인덱스 추가 (대시보드 정렬 및 필터링)
+CREATE INDEX idx_alerts_vehicle_time ON vehicle_alerts (vehicle_id, occurred_at DESC); -- 특정 차량의 최신 알람
+CREATE INDEX idx_alerts_type ON vehicle_alerts (alert_type); -- 알람 종류별 필터링
