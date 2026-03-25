@@ -2,7 +2,7 @@ locals {
   ami_id        = "ami-084a56dceed3eb9bb"
   instance_type = "t3.small"
   name_prefix   = "8team"
-  key_name      = "8team-key"
+  key_name      = "infra"
 
   # Shared Private App subnets reused across AZ-A and AZ-C.
   # Control-plane and worker roles are separated above the subnet layer.

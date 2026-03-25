@@ -195,9 +195,9 @@ jobs:
           -backend-config="access_key=${{ secrets.AWS_TFSTATE_S3_ACCESS_KEY }}"
           -backend-config="secret_key=${{ secrets.AWS_TFSTATE_S3_SECRET_ACCESS_KEY }}"
 
-      - name: Data S3 버킷 import (이미 존재하는 경우 무시)
+      - name: Data S3 버킷 import (state에 없을 때만 실행)
         working-directory: ${{ github.workspace }}/infra/aws/terraform/data
-        run: terraform import aws_s3_bucket.this ktcloud2nd-dev-data || true
+        run: terraform state show aws_s3_bucket.this > /dev/null 2>&1 || terraform import aws_s3_bucket.this ktcloud2nd-dev-data
 
       - name: Data Apply
         working-directory: ${{ github.workspace }}/infra/aws/terraform/data
@@ -240,7 +240,7 @@ jobs:
           path: infra/aws/ansible/inventory/
 
       - name: EC2 SSH 키 설정
-        run: mkdir -p ~/.ssh && echo "${{ secrets.EC2_PRIVATE_KEY }}" > ~/.ssh/infra.pem && chmod 600 ~/.ssh/infra.pem
+        run: mkdir -p ~/.ssh && printf '%s\n' "${{ secrets.EC2_PRIVATE_KEY }}" > ~/.ssh/infra.pem && chmod 600 ~/.ssh/infra.pem
 
       - name: Vault 비밀번호 파일 생성
         run: echo "${{ secrets.ANSIBLE_VAULT_PASSWORD }}" > infra/aws/ansible/vault/vault_pass
