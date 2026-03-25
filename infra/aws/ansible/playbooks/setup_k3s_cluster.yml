@@ -7,3 +7,17 @@
     - ../vault/vault.yml
   roles:
     - k3s_master
+
+- name: Linkerd 서비스 메시 설치
+  hosts: masters
+  become: yes
+  roles:
+    - linkerd
+
+- name: Grafana + Prometheus 설치
+  hosts: masters
+  become: yes
+  vars_files:
+    - ../vault/vault.yml
+  roles:
+    - grafana
