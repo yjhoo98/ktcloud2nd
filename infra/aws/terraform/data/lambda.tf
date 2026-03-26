@@ -1,3 +1,7 @@
+# Lambda를 이용한 S3 to RDS 파이프라인 구축 예정이었으나,
+# 계획 변경으로 무산 (혹여나 Lambda를 사용하게 될 경우를 대비해 주석 처리)
+
+/*
 # 파이썬 코드 ZIP 압축 (자동화)
 data "archive_file" "lambda_zip" {
   type        = "zip"
@@ -77,3 +81,4 @@ resource "aws_lambda_permission" "allow_s3" {
   principal     = "s3.amazonaws.com"
   source_arn    = aws_s3_bucket.data.arn
 }
+*/

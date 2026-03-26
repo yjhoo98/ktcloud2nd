@@ -1,3 +1,7 @@
+# Lambda를 이용한 S3 to RDS 파이프라인 구축 예정이었으나,
+# 계획 변경으로 무산 (혹여나 Lambda를 사용하게 될 경우를 대비해 주석 처리)
+
+'''
 import json
 import os
 import boto3
@@ -79,3 +83,4 @@ def lambda_handler(event, context):
         raise e
     finally:
         if conn: conn.close()
+'''

@@ -1,3 +1,6 @@
+-- 계획 변경으로 전체 주석 처리 (추후 수정 예정)
+
+/*
 -- 차종 코드 테이블: 부모
 CREATE TABLE IF NOT EXISTS model_codes (
     code          INT PRIMARY KEY,      -- 1, 2, 3, 4
@@ -80,3 +83,4 @@ CREATE TABLE IF NOT EXISTS vehicle_alerts (
 -- 인덱스 추가 (대시보드 정렬 및 필터링)
 CREATE INDEX idx_alerts_vehicle_time ON vehicle_alerts (vehicle_id, occurred_at DESC); -- 특정 차량의 최신 알람
 CREATE INDEX idx_alerts_type ON vehicle_alerts (alert_type); -- 알람 종류별 필터링
+*/
