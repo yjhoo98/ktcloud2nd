@@ -409,6 +409,20 @@ jobs:
           echo "SSM instances did not become ready in time."
           exit 1
 
+      - name: Smoke test SSM SSH connectivity
+        shell: bash
+        run: |
+          for HOST in master_a master_c; do
+            TARGET=$(grep "^${HOST} " infra/aws/ansible/inventory/hosts.ini | grep -oP 'ansible_host=\K[^\s]+')
+            echo "Testing SSH over SSM for ${HOST} (${TARGET})"
+            ssh -vvv \
+              -i ~/.ssh/infra.pem \
+              -o StrictHostKeyChecking=no \
+              -o UserKnownHostsFile=/dev/null \
+              -o ProxyCommand='aws ssm start-session --target %h --document-name AWS-StartSSHSession --parameters portNumber=%p' \
+              ubuntu@"${TARGET}" 'echo ssm-ssh-ok'
+          done
+
       - name: Run Ansible playbook
         working-directory: infra/aws/ansible
         run: ansible-playbook -i inventory/hosts.ini --vault-password-file vault/vault_pass playbooks/setup_k3s_cluster.yml
