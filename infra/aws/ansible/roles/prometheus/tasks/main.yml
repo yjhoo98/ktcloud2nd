@@ -53,6 +53,7 @@
     --timeout 15m
     --set prometheusOperator.admissionWebhooks.enabled=false
     --set prometheusOperator.admissionWebhooks.patch.enabled=false
+    --set prometheusOperator.tls.enabled=false
     --set grafana.adminPassword={{ vault_grafana_admin_password }}
     --set grafana.tolerations[0].key=nodetype
     --set grafana.tolerations[0].operator=Equal
@@ -79,6 +80,13 @@
   environment:
     KUBECONFIG: /etc/rancher/k3s/k3s.yaml
   run_once: true
+
+- name: Prometheus StatefulSet 생성 대기
+  command: kubectl wait statefulset/prometheus-kube-prometheus-stack-prometheus --namespace operator-app --for=jsonpath='{.status.replicas}' --timeout=120s
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  run_once: true
+  failed_when: false
 
 - name: Prometheus 파드 준비 완료 대기
   command: kubectl rollout status statefulset/prometheus-kube-prometheus-stack-prometheus --namespace operator-app --timeout=300s
