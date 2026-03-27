@@ -36,6 +36,11 @@
     seconds: 30
     prompt: "Consumer 앱과 Connector가 완전히 뜰 때까지 기다립니다."
 
+- name: AWS SSM에서 DB 비밀번호 가져오기
+  set_fact:
+    db_password: "{{ lookup('amazon.aws.aws_ssm', '/config/vehicle/db_password', region='ap-northeast-2') }}"
+
+# 원본 저장용
 - name: "Azure Blob Storage Sink 커넥터 설정 (Raw Data)"
   uri:
     url: "http://localhost:8083/connectors"
@@ -62,8 +67,7 @@
   retries: 20
   delay: 15
 
-# --------------- 추가 ---------------
-# 정제 데이터용 (cleansed -> stats 테이블)
+# 정제 데이터용
 - name: "AWS RDS JDBC Sink 커넥터 설정 (Cleansed Data)"
   uri:
     url: "http://localhost:8083/connectors"
@@ -90,7 +94,7 @@
   retries: 20
   delay: 15
 
-# 이상 탐지용 (anomaly -> alerts 테이블)
+# 이상 탐지용
 - name: "AWS RDS JDBC Sink 커넥터 설정 (Anomaly Alerts)"
   uri:
     url: "http://localhost:8083/connectors"
@@ -115,7 +119,6 @@
   until: "rds_anomaly_result.status is defined and (rds_anomaly_result.status == 201 or rds_anomaly_result.status == 409)"
   retries: 20
   delay: 15
-# -----------------------------------
 
 # - name: "AWS S3 Sink 커넥터 설정 (Cleansed Data)"
 #   uri:

@@ -1,6 +1,6 @@
 locals {
   ami_id        = "ami-084a56dceed3eb9bb"
-  instance_type = "t3.small"
+  instance_type = "m7i-flex.large" # 프리 티어 (8 GiB)
   name_prefix   = "8team"
   key_name      = "infra"
 

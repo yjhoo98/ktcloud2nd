@@ -83,6 +83,14 @@ resource "aws_route53_zone" "private" {
   tags = var.tags
 }
 
+# SSM에 DB 비밀번호 저장
+resource "aws_ssm_parameter" "db_password" {
+  name        = "/config/vehicle/db_password"
+  description = "DB 비밀번호"
+  type        = "SecureString" # 암호화 저장
+  value       = var.db_password # 테라폼 변수에 들어있는 그 비번
+}
+
 # RDS 고정 주소 레코드 (CNAME) (삭제해도 됨)
 resource "aws_route53_record" "db_endpoint" {
   zone_id = aws_route53_zone.private.zone_id

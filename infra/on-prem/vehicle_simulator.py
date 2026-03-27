@@ -44,7 +44,7 @@ vehicles = [
         "lon": round(random.uniform(LON_MIN, LON_MAX), 6),
         "speed": 0,
         "engine_on": True,
-        "fuel_level": round(random.uniform(30, 100), 2)
+        "fuel_level": round(random.uniform(5, 100), 2)
     }
     for i in range(50)
 ]

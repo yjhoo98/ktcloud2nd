@@ -133,6 +133,15 @@ jobs:
         ansible_ssh_common_args='-o StrictHostKeyChecking=no'
         EOF
 
+    # AWS 인증 정보 설정 (SSM에서 비번을 읽어오기 위해 반드시 필요)
+    - name: Configure AWS credentials
+      if: ${{ github.event.inputs.action == 'apply' }}
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ vars.AWS_REGION }}
+
     # Ansible 실행
     - name: Run Ansible Playbook
       if: ${{ github.event.inputs.action == 'apply' }}
@@ -144,12 +153,11 @@ jobs:
           -e "dockerhub_username=${{ secrets.DOCKERHUB_USERNAME }}" \
           -e "broker_public_ip=${BROKER_IP}" \
           -e "broker_internal_ip=${BROKER_PRIV_IP}" \
-          -e "aws_access_key=${{ secrets.AWS_ACCESS_KEY_ID }}" \
-          -e "aws_secret_key=${{ secrets.AWS_SECRET_ACCESS_KEY }}" \
-          -e "aws_region=${{ vars.AWS_REGION }}" \
-          -e "s3_bucket_name=${{ secrets.S3_BUCKET_NAME }}" \
           -e "azure_storage_account_name=${{ env.AZURE_STORAGE_NAME }}" \
-          -e "azure_storage_primary_key=${{ env.AZURE_STORAGE_KEY }}"
+          -e "azure_storage_primary_key=${{ env.AZURE_STORAGE_KEY }}" \
+          -e "rds_endpoint=db.vehicle.internal" \
+          -e "db_name=vehicle_db" \
+          -e "db_user=dbadmin"
 
     - name: Terraform Destroy
       if: ${{ github.event.inputs.action == 'destroy' }}
