@@ -33,11 +33,11 @@ INSERT INTO vehicle_master (user_id, password, user_name, vehicle_id, model_code
 ON CONFLICT (vehicle_id) DO NOTHING;
 */
 
--- 정제 데이터 테이블
+-- 1. 정제 데이터 테이블 (기존과 동일, 호환 완료)
 CREATE TABLE IF NOT EXISTS vehicle_stats (
     id SERIAL PRIMARY KEY,
     vehicle_id VARCHAR(50) NOT NULL,
-    timestamp BIGINT NOT NULL,        -- 시뮬레이터의 timestamp (Unix Time)
+    timestamp BIGINT NOT NULL,
     lat DOUBLE PRECISION,
     lon DOUBLE PRECISION,
     speed INT,
@@ -45,23 +45,22 @@ CREATE TABLE IF NOT EXISTS vehicle_stats (
     fuel_level NUMERIC(5, 2),
     event_type INT,
     mode INT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP -- DB 입력 시각
-);
-
--- 성능을 위해 차량 ID와 시간으로 인덱스 생성
-CREATE INDEX idx_vehicle_timestamp ON vehicle_stats(vehicle_id, timestamp DESC);
-
--- 이상 탐지 알람 테이블
-CREATE TABLE IF NOT EXISTS vehicle_anomaly_alerts (
-    id SERIAL PRIMARY KEY,
-    alert_time BIGINT NOT NULL,       -- 서버가 탐지한 시각 (Unix Time)
-    vehicle_id VARCHAR(50) NOT NULL,
-    anomaly_type VARCHAR(100),        -- DATA_BURST, SUDDEN_ACCEL, MISSING_DATA 등
-    description TEXT,
-    occurred_at BIGINT,               -- 시뮬레이터에서 실제 발생한 시각
-    raw_data JSONB,                   -- 당시의 원본 데이터 전체를 JSON 형태로 저장 (분석용)
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- 알람 종류별로 빠르게 필터링하기 위한 인덱스
+CREATE INDEX idx_vehicle_timestamp ON vehicle_stats(vehicle_id, timestamp DESC);
+
+-- 2. 이상 탐지 알람 테이블 (프로세서 코드의 'evidence' 필드와 호환되도록 수정)
+CREATE TABLE IF NOT EXISTS vehicle_anomaly_alerts (
+    id SERIAL PRIMARY KEY,
+    alert_time BIGINT NOT NULL,       -- 서버 감지 시각 (alert_time)
+    vehicle_id VARCHAR(50) NOT NULL,    -- 대상 차량 (vehicle_id)
+    anomaly_type VARCHAR(100),        -- 이상 종류 (anomaly_type)
+    description TEXT,                 -- 상황 제목 (description)
+    evidence VARCHAR(255),            -- 핵심 수치 증거 (evidence) -> 추가됨!
+    occurred_at BIGINT,               -- 실제 발생 시각 (occurred_at)
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_vehicle_timestamp ON vehicle_stats(vehicle_id, timestamp DESC);
 CREATE INDEX idx_anomaly_type ON vehicle_anomaly_alerts(anomaly_type);
