@@ -55,6 +55,8 @@
     --set prometheusOperator.admissionWebhooks.patch.enabled=false
     --set prometheusOperator.tls.enabled=false
     --set grafana.adminPassword={{ vault_grafana_admin_password }}
+    --set grafana.grafana\.ini.server.root_url=%(protocol)s://%(domain)s/grafana/
+    --set grafana.grafana\.ini.server.serve_from_sub_path=true
     --set grafana.tolerations[0].key=nodetype
     --set grafana.tolerations[0].operator=Equal
     --set grafana.tolerations[0].value=operator
@@ -73,7 +75,6 @@
   environment:
     KUBECONFIG: /etc/rancher/k3s/k3s.yaml
   run_once: true
-  when: prometheus_release_status.stdout != "deployed" or prometheus_statefulset_status.stdout == "not-found"
 
 - name: Grafana 파드 준비 완료 대기
   command: kubectl rollout status deployment/kube-prometheus-stack-grafana --namespace operator-app --timeout=300s
