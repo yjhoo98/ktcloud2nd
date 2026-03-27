@@ -142,10 +142,14 @@ jobs:
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: ${{ vars.AWS_REGION }}
 
-    # AWS와 통신하기 위한 필수 라이브러리 및 앤서블 컬렉션 설치
+    # AWS와 통신하기 위한 필수 라이브러리 설치 (앤서블 전용 환경에 주입)
     - name: Install dependencies for Ansible AWS lookup
+      if: ${{ github.event.inputs.action == 'apply' }}
       run: |
-        python3 -m pip install boto3 botocore
+        # 앤서블이 사용하는 가상환경 안에 boto3와 botocore를 강제로 주입
+        pipx inject ansible-core boto3 botocore
+        
+        # 앤서블 컬렉션 설치
         ansible-galaxy collection install amazon.aws
 
     # Ansible 실행
