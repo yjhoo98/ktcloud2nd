@@ -43,7 +43,7 @@
   environment:
     KUBECONFIG: /etc/rancher/k3s/k3s.yaml
   run_once: true
-  when: prometheus_release_status.stdout == "failed" or (prometheus_release_status.stdout == "deployed" and prometheus_statefulset_status.stdout == "not-found")
+  when: prometheus_release_status.stdout in ["failed", "pending-install", "pending-upgrade"] or (prometheus_release_status.stdout == "deployed" and prometheus_statefulset_status.stdout == "not-found")
 
 - name: kube-prometheus-stack Helm 배포
   command: >

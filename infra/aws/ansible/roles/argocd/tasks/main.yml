@@ -28,7 +28,7 @@
   environment:
     KUBECONFIG: /etc/rancher/k3s/k3s.yaml
   run_once: true
-  when: argocd_release_status.stdout == "failed"
+  when: argocd_release_status.stdout in ["failed", "pending-install", "pending-upgrade"]
 
 - name: ArgoCD Helm 배포
   command: >
