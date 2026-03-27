@@ -11,19 +11,30 @@
     KUBECONFIG: /etc/rancher/k3s/k3s.yaml
   run_once: true
 
-- name: kube-prometheus-stack 설치 여부 확인
-  command: helm status kube-prometheus-stack --namespace operator-app
+- name: kube-prometheus-stack 릴리즈 상태 확인
+  shell: >
+    helm status kube-prometheus-stack --namespace operator-app --output json 2>/dev/null
+    | python3 -c "import sys,json; print(json.load(sys.stdin)['info']['status'])"
+    2>/dev/null || echo "not-found"
   environment:
     KUBECONFIG: /etc/rancher/k3s/k3s.yaml
   run_once: true
-  register: prometheus_status
+  register: prometheus_release_status
   failed_when: false
   changed_when: false
+
+- name: 실패한 릴리즈 제거 (재설치 위해)
+  command: helm uninstall kube-prometheus-stack --namespace operator-app
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  run_once: true
+  when: prometheus_release_status.stdout == "failed"
 
 - name: kube-prometheus-stack Helm 배포
   command: >
     helm upgrade --install kube-prometheus-stack prometheus-community/kube-prometheus-stack
     --namespace operator-app
+    --create-namespace
     --timeout 15m
     --set grafana.adminPassword={{ vault_grafana_admin_password }}
     --set grafana.tolerations[0].key=nodetype
@@ -44,7 +55,7 @@
   environment:
     KUBECONFIG: /etc/rancher/k3s/k3s.yaml
   run_once: true
-  when: prometheus_status.rc != 0
+  when: prometheus_release_status.stdout != "deployed"
 
 - name: Grafana 파드 준비 완료 대기
   command: kubectl rollout status deployment/kube-prometheus-stack-grafana --namespace operator-app --timeout=300s
