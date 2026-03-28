@@ -7,7 +7,11 @@ variable "region" {
 variable "vm_size" {
   description = "VM Size"
   type        = string
-  default     = "Standard_B2s_v2" # 2 Cores / 8GB Memory
+  
+  # 2 Cores / 8GB Memory
+  # 테스트: Standard_B2ms (Cost-efficient)
+  # 데모: Standard_D2s_v3 (Better Kafka performance)
+  default     = "Standard_B2ms"
 }
 
 variable "vm_image" {

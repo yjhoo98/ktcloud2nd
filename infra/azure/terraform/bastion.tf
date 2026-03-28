@@ -27,7 +27,7 @@ resource "azurerm_linux_virtual_machine" "bastion_vm" {
   name                = "bastion-vm"
   resource_group_name = azurerm_resource_group.rg.name
   location            = var.region
-  size                = "Standard_B2ts_v2" # 2 Cores / 1GB Memory
+  size                = "Standard_B1s" # 1 Cores / 1GB Memory
   zone                = "1"
   admin_username      = var.admin_name
 
