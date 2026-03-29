@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>차량 데이터 플랫폼</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans KR', sans-serif;
+      background: #0f172a;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3rem;
+    }
+
+    .header {
+      text-align: center;
+    }
+
+    .header h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #f1f5f9;
+      letter-spacing: -0.5px;
+    }
+
+    .header p {
+      margin-top: 0.5rem;
+      font-size: 1rem;
+      color: #64748b;
+    }
+
+    .cards {
+      display: flex;
+      gap: 1.5rem;
+    }
+
+    .card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+      width: 240px;
+      padding: 2.5rem 2rem;
+      border-radius: 12px;
+      background: #1e293b;
+      border: 1px solid #334155;
+      color: #f1f5f9;
+      text-decoration: none;
+      transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .card:hover { transform: translateY(-4px); }
+
+    .card.user:hover {
+      border-color: #3b82f6;
+      box-shadow: 0 8px 24px rgba(59, 130, 246, 0.2);
+    }
+
+    .card.operator:hover {
+      border-color: #f59e0b;
+      box-shadow: 0 8px 24px rgba(245, 158, 11, 0.2);
+    }
+
+    .card-icon {
+      width: 56px;
+      height: 56px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .card.user .card-icon     { background: rgba(59, 130, 246, 0.15); }
+    .card.operator .card-icon { background: rgba(245, 158, 11, 0.15); }
+
+    .card-icon svg { width: 28px; height: 28px; }
+    .card.user     .card-icon svg { stroke: #3b82f6; }
+    .card.operator .card-icon svg { stroke: #f59e0b; }
+
+    .card-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+    }
+
+    .card-desc {
+      font-size: 0.875rem;
+      color: #64748b;
+      text-align: center;
+      line-height: 1.6;
+    }
+
+    .card-btn {
+      margin-top: 0.5rem;
+      padding: 0.5rem 1.5rem;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      border: none;
+      cursor: pointer;
+      color: #fff;
+    }
+
+    .card.user     .card-btn { background: #3b82f6; }
+    .card.operator .card-btn { background: #f59e0b; }
+
+    .footer {
+      position: fixed;
+      bottom: 1.5rem;
+      font-size: 0.75rem;
+      color: #334155;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <h1>차량 데이터 플랫폼</h1>
+    <p>접속할 서비스를 선택하세요</p>
+  </div>
+
+  <div class="cards">
+
+    <a href="/user" class="card user">
+      <div class="card-icon">
+        <!-- 차량 아이콘 -->
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8"
+             stroke-linecap="round" stroke-linejoin="round">
+          <path d="M5 17H3a2 2 0 0 1-2-2V9l3-5h12l3 5v6a2 2 0 0 1-2 2h-2"/>
+          <circle cx="7.5" cy="17.5" r="2.5"/>
+          <circle cx="16.5" cy="17.5" r="2.5"/>
+        </svg>
+      </div>
+      <div class="card-title">사용자</div>
+      <div class="card-desc">차량 현황 및<br>분석 대시보드</div>
+      <div class="card-btn">입장하기</div>
+    </a>
+
+    <a href="/operator" class="card operator">
+      <div class="card-icon">
+        <!-- 모니터 아이콘 -->
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8"
+             stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="3" width="20" height="14" rx="2"/>
+          <path d="M8 21h8M12 17v4"/>
+          <path d="M7 8h10M7 11.5h5"/>
+        </svg>
+      </div>
+      <div class="card-title">운영자</div>
+      <div class="card-desc">인프라 모니터링<br>및 관리 대시보드</div>
+      <div class="card-btn">입장하기</div>
+    </a>
+
+  </div>
+
+  <div class="footer">KT Cloud Vehicle Data Platform</div>
+
+</body>
+</html>

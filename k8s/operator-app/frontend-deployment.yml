@@ -1,28 +1,28 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: web-frontend
-  namespace: user-app
+  name: op-frontend
+  namespace: operator-app
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: web-frontend
+      app: op-frontend
   template:
     metadata:
       labels:
-        app: web-frontend
+        app: op-frontend
     spec:
       tolerations:
         - key: nodetype
           operator: Equal
-          value: user
+          value: operator
           effect: NoSchedule
       nodeSelector:
-        role: user-worker
+        role: operator-worker
       containers:
-        - name: web-frontend
-          image: PLACEHOLDER_FRONTEND_IMAGE  # Docker Hub 이미지 주소로 교체 (예: username/user-frontend:latest)
+        - name: op-frontend
+          image: wooyeol43/op-frontend:latest
           ports:
             - containerPort: 80
           resources:
@@ -36,11 +36,11 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: web-frontend
-  namespace: user-app
+  name: op-frontend
+  namespace: operator-app
 spec:
   selector:
-    app: web-frontend
+    app: op-frontend
   ports:
     - port: 80
       targetPort: 80

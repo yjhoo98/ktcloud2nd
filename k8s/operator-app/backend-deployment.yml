@@ -1,0 +1,67 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: op-backend
+  namespace: operator-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: op-backend
+  template:
+    metadata:
+      labels:
+        app: op-backend
+    spec:
+      tolerations:
+        - key: nodetype
+          operator: Equal
+          value: operator
+          effect: NoSchedule
+      nodeSelector:
+        role: operator-worker
+      containers:
+        - name: op-backend
+          image: wooyeol43/op-backend:latest
+          ports:
+            - containerPort: 4000
+          env:
+            - name: PORT
+              value: "4000"
+            - name: PROMETHEUS_URL
+              value: "http://kube-prometheus-stack-prometheus:9090"
+            - name: OP_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: operator-secret
+                  key: OP_USERNAME
+            - name: OP_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: operator-secret
+                  key: OP_PASSWORD
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: operator-secret
+                  key: JWT_SECRET
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 300m
+              memory: 256Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: op-backend
+  namespace: operator-app
+spec:
+  selector:
+    app: op-backend
+  ports:
+    - port: 4000
+      targetPort: 4000
+  type: ClusterIP

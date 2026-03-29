@@ -22,7 +22,7 @@ spec:
         role: user-worker
       containers:
         - name: web-backend
-          image: PLACEHOLDER_BACKEND_IMAGE #앱 도커 이미지 주소로 교체
+          image: PLACEHOLDER_BACKEND_IMAGE  # Docker Hub 이미지 주소로 교체 (예: username/user-backend:latest)
           ports:
             - containerPort: 3000
           resources:

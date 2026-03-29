@@ -1,17 +1,17 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: test-nginx
-  namespace: user-app
+  name: landing
+  namespace: landing
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: test-nginx
+      app: landing
   template:
     metadata:
       labels:
-        app: test-nginx
+        app: landing
     spec:
       tolerations:
         - key: nodetype
@@ -21,26 +21,26 @@ spec:
       nodeSelector:
         role: user-worker
       containers:
-        - name: test-nginx
-          image: nginx:latest
+        - name: landing
+          image: wooyeol43/landing:latest
           ports:
             - containerPort: 80
           resources:
             requests:
               cpu: 50m
-              memory: 64Mi
+              memory: 32Mi
             limits:
-              cpu: 200m
-              memory: 128Mi
+              cpu: 100m
+              memory: 64Mi
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: test-nginx
-  namespace: user-app
+  name: landing
+  namespace: landing
 spec:
   selector:
-    app: test-nginx
+    app: landing
   ports:
     - port: 80
       targetPort: 80

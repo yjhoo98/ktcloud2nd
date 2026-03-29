@@ -1,8 +1,8 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: user-app-ingress
-  namespace: user-app
+  name: landing-ingress
+  namespace: landing
   annotations:
     traefik.ingress.kubernetes.io/router.entrypoints: web
 spec:
@@ -10,17 +10,10 @@ spec:
   rules:
     - http:
         paths:
-          - path: /user/api
+          - path: /
             pathType: Prefix
             backend:
               service:
-                name: web-backend
-                port:
-                  number: 3000
-          - path: /user
-            pathType: Prefix
-            backend:
-              service:
-                name: web-frontend
+                name: landing
                 port:
                   number: 80
