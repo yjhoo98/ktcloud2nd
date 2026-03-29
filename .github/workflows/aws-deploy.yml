@@ -61,6 +61,7 @@ jobs:
           cp terraform.tfvars.example terraform.tfvars
           sed -i 's|^k3s_shared_token *=.*|k3s_shared_token = "${{ secrets.K3S_TOKEN }}"|' terraform.tfvars
 
+      # tfvars에 Secrets에 있는 RDS_PASSWORD 주입
       - name: Prepare data tfvars from example
         working-directory: ${{ github.workspace }}/infra/aws/terraform/data
         shell: bash

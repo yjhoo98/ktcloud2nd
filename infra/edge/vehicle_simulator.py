@@ -53,21 +53,51 @@ def clamp(value, min_value, max_value):
     return max(min_value, min(value, max_value))
 
 def send_to_kafka(vehicle, event_type, mode):
-    """ 카프카로 데이터 전송 """
+    """ 카프카로 '설명서(Schema)'를 포함한 데이터 전송 """
+    
+    # 실제 데이터 본체
     payload = {
-        "event_type": event_type,
-        "mode": mode,
-        "vehicle_id": vehicle["vehicle_id"],
-        "driver_id": vehicle["driver_id"],
-        "timestamp": int(time.time()), # AWS에서 표준 표기로 정제
-        "lat": vehicle["lat"],
-        "lon": vehicle["lon"],
-        "speed": vehicle["speed"],
-        "engine_on": vehicle["engine_on"],
-        "fuel_level": round(vehicle["fuel_level"], 2)
+        "event_type": int(event_type),
+        "mode": int(mode),
+        "vehicle_id": str(vehicle["vehicle_id"]),
+        "driver_id": str(vehicle["driver_id"]),
+        "timestamp": int(time.time()),
+        "lat": float(vehicle["lat"]),
+        "lon": float(vehicle["lon"]),
+        "speed": int(vehicle["speed"]),
+        "engine_on": bool(vehicle["engine_on"]),
+        "fuel_level": float(round(vehicle["fuel_level"], 2)) # 컬럼명 유지
     }
-    # 차량 ID를 키로 지정하여 메시지 순서 보장
-    producer.send("raw_topic", key=vehicle["vehicle_id"].encode('utf-8'), value=payload)
+
+    # JDBC 커넥터용 표준 규격 '설명서(Schema)'
+    schema_wrapped = {
+        "schema": {
+            "type": "struct",
+            "name": "vehicle_log",
+            "fields": [
+                {"field": "event_type", "type": "int32", "optional": False},
+                {"field": "mode", "type": "int32", "optional": False},
+                {"field": "vehicle_id", "type": "string", "optional": False},
+                {"field": "driver_id", "type": "string", "optional": False},
+                {"field": "timestamp", "type": "int64", "optional": False},
+                {"field": "lat", "type": "double", "optional": False},
+                {"field": "lon", "type": "double", "optional": False},
+                {"field": "speed", "type": "int32", "optional": False},
+                {"field": "engine_on", "type": "boolean", "optional": False},
+                {"field": "fuel_level", "type": "double", "optional": False} # 여기도 fuel_level
+            ]
+        },
+        "payload": payload
+    }
+
+    try:
+        # 키(Key)는 차량 ID 문자열 그대로 전송
+        key_bytes = vehicle["vehicle_id"].encode('utf-8')
+        
+        # 중요: value에 'schema_wrapped' 전체를 전송
+        producer.send("raw_topic", key=key_bytes, value=schema_wrapped)
+    except Exception as e:
+        print(f"전송 에러 ({vehicle['vehicle_id']}): {e}")
 
 def simulate_vehicle(vehicle):
     """ 차량별 독립 스레드에서 실행되는 시뮬레이션 로직 """

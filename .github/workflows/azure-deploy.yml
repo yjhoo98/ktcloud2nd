@@ -167,7 +167,7 @@ jobs:
         pipx inject ansible-core boto3 botocore
         
         # 앤서블 컬렉션 설치
-        ansible-galaxy collection install amazon.aws
+        ansible-galaxy collection install amazon.aws community.general
 
     # Ansible 실행
     - name: Run Ansible Playbook
@@ -175,6 +175,11 @@ jobs:
       run: |
         BROKER_IP=$(terraform output -json broker_public_ip | jq -r .)
         BROKER_PRIV_IP=$(terraform output -json broker_private_ip | jq -r .)
+ 
+        if [ ! -f "../ansible/roles/kafka-consumer/files/processor.py" ]; then
+          echo "Error: processor.py missing in roles/kafka-consumer/files/"
+          exit 1
+        fi
 
         ansible-playbook -i azure_hosts.ini ../ansible/playbook.yml \
           -e "dockerhub_username=${{ secrets.DOCKERHUB_USERNAME }}" \

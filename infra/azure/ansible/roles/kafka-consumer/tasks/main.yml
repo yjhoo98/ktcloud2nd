@@ -90,9 +90,9 @@
         insert.mode: "insert"
         auto.create: "false"
         value.converter: "org.apache.kafka.connect.json.JsonConverter"
-        value.converter.schemas.enable: "false"
-        batch.size: "50" # 3개의 파티션이니까 약 150개의 데이터가 보내져야 확인 가능 (오버헤드 예방, 실시간성 1~2초 지연)
-        linger.ms: "2000" # 2초마다 강제 INSERT (사용자는 거의 실시간으로 느낌)
+        value.converter.schemas.enable: "true"
+        batch.size: "1" # 3개의 파티션이니까 약 150개의 데이터가 보내져야 확인 가능 (오버헤드 예방, 실시간성 1~2초 지연)
+        #linger.ms: "2000" # 2초마다 강제 INSERT (사용자는 거의 실시간으로 느낌)
     status_code: [201, 409]
   register: rds_stats_result
   until: "rds_stats_result.status is defined and (rds_stats_result.status == 201 or rds_stats_result.status == 409)"
@@ -117,7 +117,7 @@
         insert.mode: "insert"
         auto.create: "false"
         value.converter: "org.apache.kafka.connect.json.JsonConverter"
-        value.converter.schemas.enable: "false"
+        value.converter.schemas.enable: "true"
         batch.size: "1" # 이상 탐지는 즉시 확인해야하므로 1개씩 데이터 전송
     status_code: [201, 409]
   register: rds_anomaly_result

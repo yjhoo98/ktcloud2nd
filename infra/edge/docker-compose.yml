@@ -7,7 +7,7 @@ services:
     restart: always
     environment:
       # 실행 시점에 .env 또는 터미널에서 주입받는 Azure 브로커 공인 IP
-      - KAFKA_BROKER_IP=${BROKER_PUBLIC_IP}
+      - KAFKA_BROKER_IP=${BROKER_PUBLIC_IP}:9094
     volumes:
-      - ./simulator.py:/app/vehicle_simulator.py
+      - ./vehicle_simulator.py:/app/vehicle_simulator.py
     command: python3 /app/vehicle_simulator.py

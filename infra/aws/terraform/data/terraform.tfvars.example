@@ -7,7 +7,7 @@ name_prefix = "ktcloud2nd"
 
 db_name     = "vehicle_db"
 db_username = "dbadmin"
-db_password = "admin1234"
+db_password = "temp"
 
 instance_class          = "db.t3.micro"
 allocated_storage       = 20
