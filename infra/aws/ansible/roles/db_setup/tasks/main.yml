@@ -5,4 +5,8 @@
     login_user: "{{ db_username }}"
     login_password: "{{ db_password }}"
     db: "{{ db_name }}"
-    query: "{{ lookup('file', 'init_db.sql') }}" # roles/db_setup/files/ 아래에 있는 sql 파일 읽기
+    query: "{{ lookup('file', 'schema.sql') }}" # roles/db_setup/files/ 아래에 있는 sql 파일 읽기
+
+# 외부망(GitHub Runner)에서 RDS에 직접 접근하는 (보안 그룹을 0.0.0.0/0으로 하는)
+# 보안 취약점을 해결하기 위해, AWS SSM Session Manager를 통해 마스터 노드에 접속 후
+# 내부망에서 DB 스키마를 초기화하는 Proxy 방식을 채택하여 보안성을 강화했습니다.
