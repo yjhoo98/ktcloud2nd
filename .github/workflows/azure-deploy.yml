@@ -51,11 +51,11 @@ jobs:
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/custom-kafka-connect:latest
 
       # 온프레미스 시뮬레이터 이미지 빌드
-      - name: Build and Push On-prem Simulator Image
+      - name: Build and Push Edge Simulator Image
         uses: docker/build-push-action@v4
         with:
-          context: ./infra/on-prem
-          file: ./infra/on-prem/Dockerfile
+          context: ./infra/edge
+          file: ./infra/edge/Dockerfile
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/vehicle-simulator:latest
 
