@@ -73,7 +73,7 @@ resource "aws_db_instance" "postgresql" {
   })
 }
 
-# Route 53 프라이빗 호스팅 영역 (삭제하면 안됨)
+# Route 53 프라이빗 호스팅 영역
 resource "aws_route53_zone" "private" {
   name = "vehicle.internal" # 우리가 지정한 도메인 이름
   vpc {
@@ -91,7 +91,7 @@ resource "aws_ssm_parameter" "db_password" {
   value       = var.db_password # 테라폼 변수에 들어있는 그 비번
 }
 
-# RDS 고정 주소 레코드 (CNAME) (삭제해도 됨)
+# RDS 고정 주소 레코드 (CNAME)
 resource "aws_route53_record" "db_endpoint" {
   zone_id = aws_route53_zone.private.zone_id
   name    = "db.vehicle.internal" # 앤서블에서 사용할 고정 주소

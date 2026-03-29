@@ -4,7 +4,7 @@
     login_host: "{{ db_endpoint }}"
     login_user: "{{ db_username }}"
     login_password: "{{ db_password }}"
-    db: "{{ db_name }}"
+    database: "{{ db_name }}"
     query: "{{ lookup('file', 'schema.sql') }}" # roles/db_setup/files/ 아래에 있는 sql 파일 읽기
 
 # 외부망(GitHub Runner)에서 RDS에 직접 접근하는 (보안 그룹을 0.0.0.0/0으로 하는)
