@@ -2,7 +2,7 @@
 - name: AWS RDS 정보 가져오기 (동적 주소 조회)
   amazon.aws.rds_instance_info:
     db_instance_identifier: "ktcloud2nd-postgres"
-    region: "ap-northeast-2"
+    region: "{{ aws_region }}"  # Ansible Playbook에서 넘겨준 변수 사용
   delegate_to: localhost # 조희는 GitHub Runner(로컬)에서 수행
   register: rds_info
 

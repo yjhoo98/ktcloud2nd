@@ -187,6 +187,7 @@ jobs:
         fi
 
         ansible-playbook -i azure_hosts.ini ../ansible/playbook.yml \
+          -e "aws_region=${{ vars.AWS_REGION }}" \
           -e "dockerhub_username=${{ secrets.DOCKERHUB_USERNAME }}" \
           -e "broker_public_ip=${BROKER_IP}" \
           -e "broker_internal_ip=${BROKER_PRIV_IP}" \
