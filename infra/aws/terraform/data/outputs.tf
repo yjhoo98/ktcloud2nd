@@ -5,7 +5,7 @@ output "db_instance_identifier" {
 
 output "db_endpoint" {
   description = "RDS endpoint address."
-  value       = aws_db_instance.postgres.address
+  value       = aws_db_instance.postgresql.address
 }
 
 output "db_port" {
