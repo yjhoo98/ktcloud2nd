@@ -2,7 +2,7 @@
 - name: Install K3s master with external PostgreSQL datastore
   shell: |
     curl -sfL https://get.k3s.io | \
-      K3S_DATASTORE_ENDPOINT="postgres://{{ db_username }}:{{ vault_db_password }}@{{ db_endpoint }}:{{ db_port }}/{{ db_name }}" \
+      K3S_DATASTORE_ENDPOINT="postgres://{{ db_username }}:{{ db_password }}@{{ db_endpoint }}:{{ db_port }}/{{ db_name }}" \
       K3S_TOKEN="{{ vault_k3s_shared_token }}" \
       sh -s - server \
       --tls-san {{ nlb_dns }}
@@ -31,6 +31,42 @@
   command: /tmp/get-helm.sh
   args:
     creates: /usr/local/bin/helm
+  run_once: true
+
+- name: Traefik DaemonSet + hostPort + ping 설정 (ALB 헬스체크 및 워커 노드 taint 대응)
+  shell: |
+    kubectl apply -f - <<EOF
+    apiVersion: helm.cattle.io/v1
+    kind: HelmChartConfig
+    metadata:
+      name: traefik
+      namespace: kube-system
+    spec:
+      valuesContent: |-
+        ping:
+          entryPoint: "web"
+        deployment:
+          kind: DaemonSet
+        tolerations:
+          - key: "nodetype"
+            operator: "Exists"
+            effect: "NoSchedule"
+        service:
+          type: ClusterIP
+        ports:
+          web:
+            hostPort: 80
+          websecure:
+            hostPort: 443
+    EOF
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  run_once: true
+
+- name: Traefik DaemonSet 롤아웃 대기
+  command: kubectl rollout status daemonset/traefik -n kube-system --timeout=120s
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
   run_once: true
 
 - name: autoscaler Helm repo 추가

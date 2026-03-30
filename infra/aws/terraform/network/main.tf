@@ -289,6 +289,7 @@ resource "aws_lb_target_group" "worker_http" {
     interval            = 30
     healthy_threshold   = 2
     unhealthy_threshold = 3
+    matcher             = "200"
   }
 
   tags = {

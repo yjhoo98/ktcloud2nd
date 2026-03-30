@@ -89,13 +89,41 @@
       project: default
       source:
         repoURL: {{ argocd_repo_url }}
-        targetRevision: feature/aws-k3s
+        targetRevision: aws-web
         path: k8s/operator-app
         directory:
           exclude: '*-secret.yml'
       destination:
         server: https://kubernetes.default.svc
         namespace: operator-app
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
+    EOF
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  run_once: true
+
+- name: landing ArgoCD Application 생성
+  shell: |
+    kubectl apply --validate=false -f - <<EOF
+    apiVersion: argoproj.io/v1alpha1
+    kind: Application
+    metadata:
+      name: landing
+      namespace: argocd
+    spec:
+      project: default
+      source:
+        repoURL: {{ argocd_repo_url }}
+        targetRevision: aws-web
+        path: k8s/landing
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: landing
       syncPolicy:
         automated:
           prune: true
@@ -119,7 +147,7 @@
       project: default
       source:
         repoURL: {{ argocd_repo_url }}
-        targetRevision: feature/aws-k3s
+        targetRevision: aws-web
         path: k8s/user-app
         directory:
           exclude: '*-secret.yml'

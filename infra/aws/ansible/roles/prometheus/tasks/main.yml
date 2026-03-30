@@ -55,8 +55,11 @@
     --set prometheusOperator.admissionWebhooks.patch.enabled=false
     --set prometheusOperator.tls.enabled=false
     --set grafana.adminPassword={{ vault_grafana_admin_password }}
-    --set grafana.grafana\.ini.server.root_url=%(protocol)s://%(domain)s/grafana/
-    --set grafana.grafana\.ini.server.serve_from_sub_path=true
+    --set grafana.env.GF_SERVER_ROOT_URL="%(protocol)s://%(domain)s/grafana/"
+    --set grafana.env.GF_SERVER_SERVE_FROM_SUB_PATH=true
+    --set grafana.env.GF_SECURITY_ALLOW_EMBEDDING=true
+    --set grafana.env.GF_AUTH_ANONYMOUS_ENABLED=true
+    --set grafana.env.GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
     --set grafana.tolerations[0].key=nodetype
     --set grafana.tolerations[0].operator=Equal
     --set grafana.tolerations[0].value=operator
