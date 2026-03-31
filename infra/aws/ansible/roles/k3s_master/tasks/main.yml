@@ -79,6 +79,33 @@
     KUBECONFIG: /etc/rancher/k3s/k3s.yaml
   run_once: true
 
+- name: CoreDNS HA 설정 (replica 2개, AZ 분산)
+  shell: |
+    kubectl patch deployment coredns -n kube-system --type merge -p '{
+      "spec": {
+        "replicas": 2,
+        "template": {
+          "spec": {
+            "topologySpreadConstraints": [
+              {
+                "maxSkew": 1,
+                "topologyKey": "topology.kubernetes.io/zone",
+                "whenUnsatisfiable": "DoNotSchedule",
+                "labelSelector": {
+                  "matchLabels": {
+                    "k8s-app": "kube-dns"
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    }'
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  run_once: true
+
 - name: autoscaler Helm repo 추가
   command: helm repo add autoscaler https://kubernetes.github.io/autoscaler --force-update
   environment:

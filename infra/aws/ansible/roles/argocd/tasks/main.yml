@@ -30,6 +30,20 @@
   run_once: true
   when: argocd_release_status.stdout in ["failed", "pending-install", "pending-upgrade"]
 
+- name: argocd 네임스페이스 생성 및 Linkerd 주입 활성화
+  shell: |
+    kubectl apply -f - <<EOF
+    apiVersion: v1
+    kind: Namespace
+    metadata:
+      name: argocd
+      annotations:
+        linkerd.io/inject: enabled
+    EOF
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  run_once: true
+
 - name: ArgoCD Helm 배포
   command: >
     helm upgrade --install argocd argo/argo-cd
@@ -112,23 +126,23 @@
     KUBECONFIG: /etc/rancher/k3s/k3s.yaml
   run_once: true
 
-- name: landing ArgoCD Application 생성
+- name: login ArgoCD Application 생성
   shell: |
     kubectl apply --validate=false -f - <<EOF
     apiVersion: argoproj.io/v1alpha1
     kind: Application
     metadata:
-      name: landing
+      name: login
       namespace: argocd
     spec:
       project: default
       source:
         repoURL: {{ argocd_repo_url }}
         targetRevision: aws-web
-        path: k8s/landing
+        path: k8s/login
       destination:
         server: https://kubernetes.default.svc
-        namespace: landing
+        namespace: login
       syncPolicy:
         automated:
           prune: true

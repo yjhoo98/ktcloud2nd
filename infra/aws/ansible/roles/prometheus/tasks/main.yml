@@ -54,6 +54,11 @@
     --set prometheusOperator.admissionWebhooks.enabled=false
     --set prometheusOperator.admissionWebhooks.patch.enabled=false
     --set prometheusOperator.tls.enabled=false
+    --set prometheusOperator.tolerations[0].key=nodetype
+    --set prometheusOperator.tolerations[0].operator=Equal
+    --set prometheusOperator.tolerations[0].value=operator
+    --set prometheusOperator.tolerations[0].effect=NoSchedule
+    --set prometheusOperator.nodeSelector.role=operator-worker
     --set grafana.adminPassword={{ vault_grafana_admin_password }}
     --set grafana.env.GF_SERVER_ROOT_URL="%(protocol)s://%(domain)s/grafana/"
     --set grafana.env.GF_SERVER_SERVE_FROM_SUB_PATH=true
@@ -94,6 +99,74 @@
 
 - name: Prometheus 파드 준비 완료 대기
   command: kubectl rollout status statefulset/prometheus-kube-prometheus-stack-prometheus --namespace operator-app --timeout=300s
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  run_once: true
+
+- name: Linkerd 컨트롤 플레인 PodMonitor 등록
+  shell: |
+    kubectl apply -f - <<EOF
+    apiVersion: monitoring.coreos.com/v1
+    kind: PodMonitor
+    metadata:
+      name: linkerd-controller
+      namespace: operator-app
+      labels:
+        release: kube-prometheus-stack
+    spec:
+      namespaceSelector:
+        matchNames:
+        - linkerd
+        - linkerd-viz
+      selector:
+        matchLabels: {}
+      podMetricsEndpoints:
+      - port: admin-http
+        path: /metrics
+    EOF
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  run_once: true
+
+- name: Linkerd 데이터플레인 프록시 PodMonitor 등록
+  shell: |
+    kubectl apply -f - <<EOF
+    apiVersion: monitoring.coreos.com/v1
+    kind: PodMonitor
+    metadata:
+      name: linkerd-proxy
+      namespace: operator-app
+      labels:
+        release: kube-prometheus-stack
+    spec:
+      namespaceSelector:
+        any: true
+      selector:
+        matchExpressions:
+        - key: linkerd.io/control-plane-ns
+          operator: Exists
+      podMetricsEndpoints:
+      - port: linkerd-admin
+        path: /metrics
+    EOF
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  run_once: true
+
+- name: Linkerd Grafana 대시보드 추가
+  command: >
+    helm upgrade kube-prometheus-stack prometheus-community/kube-prometheus-stack
+    --namespace operator-app
+    --reuse-values
+    --set "grafana.dashboards.default.linkerd-top-line.gnetId=11868"
+    --set "grafana.dashboards.default.linkerd-top-line.revision=6"
+    --set "grafana.dashboards.default.linkerd-top-line.datasource=Prometheus"
+    --set "grafana.dashboards.default.linkerd-health.gnetId=11869"
+    --set "grafana.dashboards.default.linkerd-health.revision=3"
+    --set "grafana.dashboards.default.linkerd-health.datasource=Prometheus"
+    --set "grafana.dashboards.default.linkerd-deployment.gnetId=11870"
+    --set "grafana.dashboards.default.linkerd-deployment.revision=6"
+    --set "grafana.dashboards.default.linkerd-deployment.datasource=Prometheus"
   environment:
     KUBECONFIG: /etc/rancher/k3s/k3s.yaml
   run_once: true

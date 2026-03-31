@@ -26,7 +26,7 @@ env:
   TF_VERSION: "1.8.5"
   TF_VAR_network_state_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
   TF_VAR_network_state_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-  ARGOCD_REPO_URL: https://github.com/yjhoo98/ktcloud2nd.git
+  ARGOCD_REPO_URL: https://github.com/ktcloud2nd/ktcloud2nd.git
 
 jobs:
   terraform-plan:
