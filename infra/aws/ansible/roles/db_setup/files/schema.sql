@@ -1,37 +1,76 @@
--- 계획 변경으로 전체 주석 처리 (추후 수정 예정)
-
-/*
--- 차종 코드 테이블: 부모
 CREATE TABLE IF NOT EXISTS model_codes (
-    code          INT PRIMARY KEY,      -- 1, 2, 3, 4
-    model_name    VARCHAR(50) NOT NULL, -- 차종
-    image_url     TEXT                  -- S3 버킷 이미지 경로
+    code INT PRIMARY KEY,
+    model_name VARCHAR(50) NOT NULL,
+    image_url TEXT
 );
 
 INSERT INTO model_codes (code, model_name, image_url) VALUES
-(1, 'Avante', 'https://ktcloud2nd-dev-data.s3.ap-northeast-2.amazonaws.com/models/avante.png'),
-(2, 'Granduer', 'https://ktcloud2nd-dev-data.s3.ap-northeast-2.amazonaws.com/models/granduer.png'),
-(3, 'Santafe', 'https://ktcloud2nd-dev-data.s3.ap-northeast-2.amazonaws.com/models/santafe.png'),
-(4, 'Tucson', 'https://ktcloud2nd-dev-data.s3.ap-northeast-2.amazonaws.com/models/tucson.png')
+(1, 'Avante', '/models/avante.png'),
+(2, 'Grandeur', '/models/grandeur.png'),
+(3, 'Santafe', '/models/santafe.png'),
+(4, 'Tucson', '/models/tucson.png')
 ON CONFLICT (code) DO NOTHING;
 
--- 사용자 테이블: 자식
-CREATE TABLE IF NOT EXISTS vehicle_master (
-    id            SERIAL PRIMARY KEY,
-    user_id       VARCHAR(50) NOT NULL,
-    password      VARCHAR(255) NOT NULL,
-    user_name     VARCHAR(100),
-    vehicle_id    VARCHAR(50) UNIQUE,
-    model_code    INT REFERENCES model_codes(code) -- 외래키 참조
+CREATE TABLE IF NOT EXISTS accounts (
+    id SERIAL PRIMARY KEY,
+    user_id VARCHAR(50) NOT NULL UNIQUE,
+    password_hash VARCHAR(255) NOT NULL,
+    role VARCHAR(20) NOT NULL CHECK (role IN ('user', 'operator')),
+    user_name VARCHAR(100),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-INSERT INTO vehicle_master (user_id, password, user_name, vehicle_id, model_code) VALUES
-('user01', 'pass01!', '강동훈', 'car_1', 1),
-('user02', 'pass02!', '이정수', 'car_2', 2),
-('user03', 'pass03!', '박서현', 'car_3', 3),
-('user04', 'pass04!', '최윤지', 'car_4', 4)
+CREATE TABLE IF NOT EXISTS vehicle_master (
+    id SERIAL PRIMARY KEY,
+    vehicle_id VARCHAR(50) NOT NULL UNIQUE,
+    model_code INT REFERENCES model_codes(code)
+);
+
+CREATE TABLE IF NOT EXISTS user_vehicle_mapping (
+    id SERIAL PRIMARY KEY,
+    account_id INT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+    vehicle_id VARCHAR(50) NOT NULL REFERENCES vehicle_master(vehicle_id) ON DELETE CASCADE,
+    UNIQUE (account_id, vehicle_id)
+);
+
+INSERT INTO accounts (user_id, password_hash, role, user_name) VALUES
+('user01', 'pass01!', 'user', '강동훈'),
+('user02', 'pass02!', 'user', '이정수'),
+('user03', 'pass03!', 'user', '박서현'),
+('user04', 'pass04!', 'user', '최윤지'),
+('admin01', 'admin01!', 'operator', '최민수')
+ON CONFLICT (user_id) DO NOTHING;
+
+INSERT INTO vehicle_master (vehicle_id, model_code) VALUES
+('car_1', 1),
+('car_2', 2),
+('car_3', 3),
+('car_4', 4)
 ON CONFLICT (vehicle_id) DO NOTHING;
-*/
+
+INSERT INTO user_vehicle_mapping (account_id, vehicle_id)
+SELECT a.id, 'car_1'
+FROM accounts a
+WHERE a.user_id = 'user01'
+ON CONFLICT DO NOTHING;
+
+INSERT INTO user_vehicle_mapping (account_id, vehicle_id)
+SELECT a.id, 'car_2'
+FROM accounts a
+WHERE a.user_id = 'user02'
+ON CONFLICT DO NOTHING;
+
+INSERT INTO user_vehicle_mapping (account_id, vehicle_id)
+SELECT a.id, 'car_3'
+FROM accounts a
+WHERE a.user_id = 'user03'
+ON CONFLICT DO NOTHING;
+
+INSERT INTO user_vehicle_mapping (account_id, vehicle_id)
+SELECT a.id, 'car_4'
+FROM accounts a
+WHERE a.user_id = 'user04'
+ON CONFLICT DO NOTHING;
 
 -- 정제 데이터 테이블 (기존과 동일, 호환 완료)
 CREATE TABLE IF NOT EXISTS vehicle_stats (
