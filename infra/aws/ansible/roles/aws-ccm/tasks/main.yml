@@ -1,0 +1,60 @@
+---
+- name: K3s config에 disable-cloud-controller 설정 추가
+  lineinfile:
+    path: /etc/rancher/k3s/config.yaml
+    line: "disable-cloud-controller: true"
+    create: yes
+  register: k3s_config_changed
+
+- name: K3s 서비스 재시작 (설정 변경 시)
+  systemd:
+    name: k3s
+    state: restarted
+  when: k3s_config_changed.changed
+
+- name: K3s 재시작 후 API 서버 준비 대기
+  command: kubectl get nodes
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  retries: 12
+  delay: 10
+  until: result.rc == 0
+  register: result
+  failed_when: false
+  run_once: true
+  when: k3s_config_changed.changed
+
+- name: AWS CCM Helm repo 추가
+  command: helm repo add aws-cloud-controller-manager https://kubernetes.github.io/cloud-provider-aws --force-update
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  run_once: true
+
+- name: Helm repo 업데이트
+  command: helm repo update
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  run_once: true
+
+- name: AWS CCM 배포
+  command: >
+    helm upgrade --install aws-cloud-controller-manager
+    aws-cloud-controller-manager/aws-cloud-controller-manager
+    --namespace kube-system
+    --set args[0]=--v=2
+    --set args[1]=--cloud-provider=aws
+    --set args[2]=--cluster-name={{ cluster_name }}
+    --set clusterRoleRules[0].apiGroups[0]=""
+    --set nodeSelector.node-role\.kubernetes\.io/control-plane=""
+    --set tolerations[0].key=node-role.kubernetes.io/control-plane
+    --set tolerations[0].effect=NoSchedule
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  run_once: true
+
+- name: AWS CCM 파드 준비 완료 대기
+  command: kubectl rollout status deployment/aws-cloud-controller-manager -n kube-system --timeout=180s
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  run_once: true
+  ignore_errors: yes

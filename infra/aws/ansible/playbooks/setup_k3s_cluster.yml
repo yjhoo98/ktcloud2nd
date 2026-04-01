@@ -46,6 +46,12 @@
   roles:
     - cluster-autoscaler
 
+- name: AWS Cloud Controller Manager 설치
+  hosts: masters[0]
+  become: yes
+  roles:
+    - aws-ccm
+
 - name: Prometheus/Grafana 모니터링 스택 설치
   hosts: masters
   become: yes

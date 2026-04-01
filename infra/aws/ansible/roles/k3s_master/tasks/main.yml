@@ -81,7 +81,7 @@
   until: traefik_ds_check.rc == 0
 
 - name: Traefik DaemonSet 롤아웃 대기
-  command: kubectl rollout status daemonset/traefik -n kube-system --timeout=120s
+  command: kubectl rollout status daemonset/traefik -n kube-system --timeout=60s
   environment:
     KUBECONFIG: /etc/rancher/k3s/k3s.yaml
   run_once: true
