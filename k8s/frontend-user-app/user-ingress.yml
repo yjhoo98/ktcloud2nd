@@ -7,13 +7,14 @@ metadata:
   namespace: user-app
   annotations:
     traefik.ingress.kubernetes.io/router.entrypoints: web
-    traefik.ingress.kubernetes.io/router.middlewares: user-app-user-strip-prefix@kubernetescrd,user-app-coraza-waf@kubernetescrd
+    traefik.ingress.kubernetes.io/router.middlewares: user-app-coraza-waf@kubernetescrd
 spec:
   ingressClassName: traefik
   rules:
-    - http:
+    - host: app.example.com
+      http:
         paths:
-          - path: /user
+          - path: /
             pathType: Prefix
             backend:
               service:

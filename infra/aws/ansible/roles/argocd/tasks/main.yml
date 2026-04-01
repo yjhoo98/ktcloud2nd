@@ -150,36 +150,6 @@
     KUBECONFIG: /etc/rancher/k3s/k3s.yaml
   run_once: true
 
-- name: frontend-login ArgoCD Application 생성
-  shell: |
-    kubectl apply --validate=false -f - <<EOF
-    apiVersion: argoproj.io/v1alpha1
-    kind: Application
-    metadata:
-      name: frontend-login
-      namespace: argocd
-    spec:
-      project: default
-      source:
-        repoURL: https://github.com/yjhoo98/ktcloud2nd.git
-        targetRevision: main
-        path: k8s/frontend-login
-        directory:
-          exclude: '*-secret.yml'
-      destination:
-        server: https://kubernetes.default.svc
-        namespace: login
-      syncPolicy:
-        automated:
-          prune: true
-          selfHeal: true
-        syncOptions:
-          - CreateNamespace=true
-    EOF
-  environment:
-    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
-  run_once: true
-
 - name: user-app ArgoCD Application 생성
   shell: |
     kubectl apply --validate=false -f - <<EOF

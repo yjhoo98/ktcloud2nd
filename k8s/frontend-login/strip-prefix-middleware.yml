@@ -1,9 +1,0 @@
-apiVersion: traefik.io/v1alpha1
-kind: Middleware
-metadata:
-  name: login-strip-prefix
-  namespace: login
-spec:
-  stripPrefix:
-    prefixes:
-      - /login

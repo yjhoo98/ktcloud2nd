@@ -1,9 +1,0 @@
-apiVersion: traefik.io/v1alpha1
-kind: Middleware
-metadata:
-  name: operator-strip-prefix
-  namespace: operator-app
-spec:
-  stripPrefix:
-    prefixes:
-      - /operator
