@@ -108,7 +108,7 @@
       project: default
       source:
         repoURL: https://github.com/yjhoo98/ktcloud2nd.git
-        targetRevision: aws-web
+        targetRevision: main
         path: k8s/frontend-operator-app
         directory:
           exclude: '*-secret.yml'
@@ -138,7 +138,7 @@
       project: default
       source:
         repoURL: https://github.com/yjhoo98/ktcloud2nd.git
-        targetRevision: aws-web
+        targetRevision: main
         path: k8s/frontend-login
         directory:
           exclude: '*-secret.yml'
@@ -168,7 +168,7 @@
       project: default
       source:
         repoURL: https://github.com/yjhoo98/ktcloud2nd.git
-        targetRevision: aws-web
+        targetRevision: main
         path: k8s/frontend-user-app
         directory:
           exclude: '*-secret.yml'
@@ -198,7 +198,7 @@
       project: default
       source:
         repoURL: https://github.com/yjhoo98/ktcloud2nd.git
-        targetRevision: aws-web
+        targetRevision: main
         path: k8s/backend-login
         directory:
           exclude: '*-secret.yml'
@@ -228,7 +228,7 @@
       project: default
       source:
         repoURL: https://github.com/yjhoo98/ktcloud2nd.git
-        targetRevision: aws-web
+        targetRevision: main
         path: k8s/backend-user
         directory:
           exclude: '*-secret.yml'
@@ -258,7 +258,7 @@
       project: default
       source:
         repoURL: https://github.com/yjhoo98/ktcloud2nd.git
-        targetRevision: aws-web
+        targetRevision: main
         path: k8s/backend-operator
         directory:
           exclude: '*-secret.yml'
