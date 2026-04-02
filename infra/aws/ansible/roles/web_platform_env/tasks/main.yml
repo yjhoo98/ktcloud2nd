@@ -59,10 +59,17 @@
 
 - name: Ensure operator namespace backend config exists
   vars:
+    operator_app_host_resolved: >-
+      {{
+        operator_app_host
+        | default('admin.example.com', true)
+        | regex_replace('^https?://', '')
+        | regex_replace('/.*$', '')
+      }}
     quicksight_allowed_domains_resolved: >-
       {{
         quicksight_allowed_domains
-        | default('https://' ~ (operator_app_host | default('admin.example.com', true)), true)
+        | default('https://' ~ operator_app_host_resolved, true)
       }}
     grafana_embed_url_resolved: >-
       {{
