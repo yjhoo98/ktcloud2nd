@@ -1,4 +1,5 @@
-import { query } from './db.js';
+Ôªøimport { query } from './db.js';
+import { hashPassword, readTrimmedEnv } from './authSecurity.js';
 
 const defaultModelCodes = [
   { code: 1, modelName: 'Avante', imageUrl: '/models/avante.png' },
@@ -8,12 +9,26 @@ const defaultModelCodes = [
 ];
 
 const defaultAccounts = [
-  { userId: 'user01', password: 'pass01!', role: 'user', userName: '∞≠µø»∆', vehicleId: 'car_1', modelCode: 1 },
-  { userId: 'user02', password: 'pass02!', role: 'user', userName: '¿Ã¡§ºˆ', vehicleId: 'car_2', modelCode: 2 },
-  { userId: 'user03', password: 'pass03!', role: 'user', userName: 'π⁄º≠«ˆ', vehicleId: 'car_3', modelCode: 3 },
-  { userId: 'user04', password: 'pass04!', role: 'user', userName: '√÷¿±¡ˆ', vehicleId: 'car_4', modelCode: 4 },
-  { userId: 'admin01', password: 'admin01!', role: 'operator', userName: '√÷πŒºˆ', vehicleId: null, modelCode: null }
+  { userId: 'user01', password: 'pass01!', role: 'user', userName: 'Í∞ïÎèôÌõà', vehicleId: 'car_1', modelCode: 1 },
+  { userId: 'user02', password: 'pass02!', role: 'user', userName: 'Ïù¥Ï†ïÏàò', vehicleId: 'car_2', modelCode: 2 },
+  { userId: 'user03', password: 'pass03!', role: 'user', userName: 'Î∞ïÏÑúÌòÑ', vehicleId: 'car_3', modelCode: 3 },
+  { userId: 'user04', password: 'pass04!', role: 'user', userName: 'ÏµúÏú§ÏßÄ', vehicleId: 'car_4', modelCode: 4 },
+  { userId: 'admin01', password: 'admin01!', role: 'operator', userName: 'ÏµúÎØºÏàò', vehicleId: null, modelCode: null }
 ];
+
+function isTruthy(value) {
+  return ['1', 'true', 'yes', 'on'].includes(String(value || '').toLowerCase());
+}
+
+function shouldSeedDefaultAccounts() {
+  const explicitSetting = readTrimmedEnv('ENABLE_DEV_SEED_ACCOUNTS');
+
+  if (explicitSetting) {
+    return isTruthy(explicitSetting);
+  }
+
+  return readTrimmedEnv('NODE_ENV', 'development').toLowerCase() !== 'production';
+}
 
 export async function initSchema() {
   await query(`
@@ -50,6 +65,26 @@ export async function initSchema() {
       vehicle_id VARCHAR(50) NOT NULL REFERENCES vehicle_master(vehicle_id) ON DELETE CASCADE,
       UNIQUE (account_id, vehicle_id)
     );
+  `);
+
+  await query(`
+    CREATE TABLE IF NOT EXISTS vehicle_stats (
+      id SERIAL PRIMARY KEY,
+      vehicle_id VARCHAR(50) NOT NULL,
+      timestamp BIGINT NOT NULL,
+      lat DOUBLE PRECISION,
+      lon DOUBLE PRECISION,
+      speed INT,
+      engine_on BOOLEAN,
+      fuel_level NUMERIC(5, 2),
+      event_type INT,
+      mode INT
+    );
+  `);
+
+  await query(`
+    CREATE INDEX IF NOT EXISTS idx_vehicle_timestamp
+    ON vehicle_stats (vehicle_id, timestamp DESC);
   `);
 
   await query(`
@@ -179,40 +214,40 @@ export async function initSchema() {
     );
   }
 
-  for (const account of defaultAccounts) {
-    await query(
-      `
-        INSERT INTO accounts (user_id, password_hash, role, user_name)
-        VALUES ($1, $2, $3, $4)
-        ON CONFLICT (user_id) DO NOTHING;
-      `,
-      [account.userId, account.password, account.role, account.userName]
-    );
+  if (shouldSeedDefaultAccounts()) {
+    for (const account of defaultAccounts) {
+      await query(
+        `
+          INSERT INTO accounts (user_id, password_hash, role, user_name)
+          VALUES ($1, $2, $3, $4)
+          ON CONFLICT (user_id) DO NOTHING;
+        `,
+        [account.userId, hashPassword(account.password), account.role, account.userName]
+      );
 
-    if (account.role !== 'user') {
-      continue;
+      if (account.role !== 'user') {
+        continue;
+      }
+
+      await query(
+        `
+          INSERT INTO vehicle_master (vehicle_id, model_code)
+          VALUES ($1, $2)
+          ON CONFLICT (vehicle_id) DO NOTHING;
+        `,
+        [account.vehicleId, account.modelCode]
+      );
+
+      await query(
+        `
+          INSERT INTO user_vehicle_mapping (account_id, vehicle_id)
+          SELECT id, $2
+          FROM accounts
+          WHERE user_id = $1
+          ON CONFLICT DO NOTHING;
+        `,
+        [account.userId, account.vehicleId]
+      );
     }
-
-    await query(
-      `
-        INSERT INTO vehicle_master (vehicle_id, model_code)
-        VALUES ($1, $2)
-        ON CONFLICT (vehicle_id) DO NOTHING;
-      `,
-      [account.vehicleId, account.modelCode]
-    );
-
-    await query(
-      `
-        INSERT INTO user_vehicle_mapping (account_id, vehicle_id)
-        SELECT id, $2
-        FROM accounts
-        WHERE user_id = $1
-        ON CONFLICT DO NOTHING;
-      `,
-      [account.userId, account.vehicleId]
-    );
   }
 }
-
-

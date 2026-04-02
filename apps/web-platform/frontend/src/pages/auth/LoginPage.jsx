@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { fetchModelCodes, login, signup } from '../../api/auth';
 import { appTarget, getDefaultPathForRole, isExternalUrl } from '../../config/appTarget';
@@ -28,7 +28,7 @@ function LoginPage({ allowedRole = null }) {
   const [successMessage, setSuccessMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  useState(() => {
+  useEffect(() => {
     fetchModelCodes()
       .then((models) =>
         setModelCodes(models.filter((model) => Number(model.code) >= 1))

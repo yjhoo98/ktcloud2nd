@@ -1,17 +1,7 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
+import { requestWithSession } from './sessionRequest';
 
 async function request(path, defaultMessage) {
-  const response = await fetch(`${API_BASE_URL}${path}`);
-  const data = await response.json().catch(() => ({}));
-
-  if (!response.ok) {
-    const error = new Error(data.message || defaultMessage);
-    error.missingFields = data.missingFields || [];
-    error.panels = data.panels || [];
-    throw error;
-  }
-
-  return data;
+  return requestWithSession(path, { defaultMessage });
 }
 
 export async function fetchAnomalyEmbeds() {

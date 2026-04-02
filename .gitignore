@@ -26,3 +26,6 @@ apps/web-platform/backend/.env
 apps/web-platform/deploy.env
 apps/web-platform/.vite/
 apps/web-platform/coverage/
+apps/web-platform/frontend/.npm-cache/
+apps/web-platform/backend/.npm-cache/
+tmp/

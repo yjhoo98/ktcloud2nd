@@ -2,6 +2,13 @@ import 'dotenv/config';
 import cors from 'cors';
 import express from 'express';
 import crypto from 'crypto';
+import {
+  getSessionSecret,
+  hashPassword,
+  needsPasswordRehash,
+  readTrimmedEnv,
+  verifyPassword
+} from './authSecurity.js';
 import { query, withTransaction } from './db.js';
 import { initSchema } from './initSchema.js';
 import {
@@ -11,12 +18,14 @@ import {
   validateQuickSightConfig
 } from './quicksight.js';
 import { getGrafanaEmbedPayload } from './grafana.js';
+import { loadAnomalyDashboard } from './anomalyDashboard.js';
 import { loadUserDashboard } from './userDashboard.js';
 
 const app = express();
 const port = Number(process.env.PORT || 4000);
-const appTarget = (process.env.APP_TARGET || 'all').toLowerCase();
+const appTarget = readTrimmedEnv('APP_TARGET', 'all').toLowerCase();
 const sessionTtlSeconds = Number(process.env.SESSION_TTL_SECONDS || 60 * 60);
+const sessionSecret = getSessionSecret();
 const allowedOrigins =
   process.env.CORS_ALLOWED_ORIGINS?.split(',')
     .map((origin) => origin.trim())
@@ -48,7 +57,7 @@ function createSessionToken(account) {
   };
   const encodedPayload = encodeTokenPart(JSON.stringify(payload));
   const signature = crypto
-    .createHmac('sha256', String(account.passwordHash))
+    .createHmac('sha256', sessionSecret)
     .update(encodedPayload)
     .digest('base64url');
 
@@ -95,8 +104,7 @@ async function verifySessionToken(authorizationHeader) {
     `
       SELECT
         user_id AS "userId",
-        role,
-        password_hash AS "passwordHash"
+        role
       FROM accounts
       WHERE user_id = $1
       LIMIT 1
@@ -110,7 +118,7 @@ async function verifySessionToken(authorizationHeader) {
 
   const account = accountResult.rows[0];
   const expectedSignature = crypto
-    .createHmac('sha256', String(account.passwordHash))
+    .createHmac('sha256', sessionSecret)
     .update(encodedPayload)
     .digest();
   const actualSignature = Buffer.from(providedSignature, 'base64url');
@@ -131,6 +139,25 @@ async function verifySessionToken(authorizationHeader) {
     role: account.role
   };
 }
+
+function requireRoleSession(requiredRole) {
+  return async (request, response, next) => {
+    const session = await verifySessionToken(request.header('authorization'));
+
+    if (!session || session.role !== requiredRole) {
+      response.status(401).json({
+        message: `A valid authenticated ${requiredRole} session is required.`
+      });
+      return;
+    }
+
+    request.session = session;
+    next();
+  };
+}
+
+const requireOperatorSession = requireRoleSession('operator');
+const requireUserSession = requireRoleSession('user');
 
 app.use(
   cors({
@@ -167,7 +194,7 @@ app.get('/api/health', async (_request, response) => {
   response.json({ ok: true, now: result.rows[0].now, appTarget });
 });
 
-if (isEnabledForTarget('login')) {
+if (isEnabledForTarget('login', 'user', 'operator')) {
   app.get('/api/model-codes', async (_request, response) => {
     const result = await query(
       'SELECT code, model_name AS "modelName", image_url AS "imageUrl" FROM model_codes ORDER BY code ASC'
@@ -234,7 +261,7 @@ if (isEnabledForTarget('login')) {
           VALUES ($1, $2, 'user', $3)
           RETURNING id, user_id AS "userId", user_name AS "userName", role, password_hash AS "passwordHash";
         `,
-        [userId, password, userName]
+        [userId, hashPassword(password), userName]
       );
 
       await client.query(
@@ -304,9 +331,10 @@ if (isEnabledForTarget('login')) {
           ON uvm.account_id = a.id
           AND a.role = 'user'
         LEFT JOIN vehicle_master v ON v.vehicle_id = uvm.vehicle_id
-        WHERE a.user_id = $1 AND a.password_hash = $2
+        WHERE a.user_id = $1
+        LIMIT 1
       `,
-      [userId, password]
+      [userId]
     );
 
     if (result.rowCount === 0) {
@@ -316,11 +344,36 @@ if (isEnabledForTarget('login')) {
       return;
     }
 
+    const account = result.rows[0];
+    const passwordMatches = verifyPassword(password, account.passwordHash);
+
+    if (!passwordMatches) {
+      response.status(401).json({
+        message: 'Invalid userId or password.'
+      });
+      return;
+    }
+
+    if (needsPasswordRehash(account.passwordHash)) {
+      const upgradedPasswordHash = hashPassword(password);
+
+      await query(
+        `
+          UPDATE accounts
+          SET password_hash = $1
+          WHERE id = $2
+        `,
+        [upgradedPasswordHash, account.id]
+      );
+
+      account.passwordHash = upgradedPasswordHash;
+    }
+
     response.json({
-      role: result.rows[0].role,
-      token: createSessionToken(result.rows[0]),
+      role: account.role,
+      token: createSessionToken(account),
       user: {
-        ...result.rows[0],
+        ...account,
         passwordHash: undefined
       }
     });
@@ -328,11 +381,23 @@ if (isEnabledForTarget('login')) {
 }
 
 if (isEnabledForTarget('operator')) {
-  app.get('/api/grafana/embed', (_request, response) => {
+  app.get('/api/grafana/embed', requireOperatorSession, (_request, response) => {
     response.json(getGrafanaEmbedPayload());
   });
 
-  app.get('/api/anomalies/latest-alert', async (_request, response) => {
+  app.get('/api/anomalies/dashboard', requireOperatorSession, async (_request, response) => {
+    try {
+      const dashboard = await loadAnomalyDashboard();
+      response.json(dashboard);
+    } catch (error) {
+      response.status(500).json({
+        message: 'Failed to load the anomaly dashboard.',
+        details: error.message
+      });
+    }
+  });
+
+  app.get('/api/anomalies/latest-alert', requireOperatorSession, async (_request, response) => {
     try {
       const result = await query(
         `
@@ -359,7 +424,7 @@ if (isEnabledForTarget('operator')) {
     }
   });
 
-  app.get('/api/quicksight/anomaly-embeds', async (_request, response) => {
+  app.get('/api/quicksight/anomaly-embeds', requireOperatorSession, async (_request, response) => {
     try {
       const embeds = await getAnomalyEmbedUrls();
       response.json({
@@ -370,7 +435,7 @@ if (isEnabledForTarget('operator')) {
     }
   });
 
-  app.get('/api/quicksight/vehicle-embeds', async (_request, response) => {
+  app.get('/api/quicksight/vehicle-embeds', requireOperatorSession, async (_request, response) => {
     try {
       const embeds = await getVehicleEmbedUrls();
       response.json({
@@ -381,30 +446,21 @@ if (isEnabledForTarget('operator')) {
     }
   });
 
-  app.get('/api/quicksight/anomaly-embeds/status', (_request, response) => {
+  app.get('/api/quicksight/anomaly-embeds/status', requireOperatorSession, (_request, response) => {
     const validation = validateQuickSightConfig('anomaly');
     response.json(validation);
   });
 
-  app.get('/api/quicksight/vehicle-embeds/status', (_request, response) => {
+  app.get('/api/quicksight/vehicle-embeds/status', requireOperatorSession, (_request, response) => {
     const validation = validateQuickSightConfig('vehicle');
     response.json(validation);
   });
 }
 
 if (isEnabledForTarget('user')) {
-  app.get('/api/user/dashboard', async (request, response) => {
-    const session = await verifySessionToken(request.header('authorization'));
-
-    if (!session || session.role !== 'user') {
-      response.status(401).json({
-        message: 'A valid authenticated user session is required.'
-      });
-      return;
-    }
-
+  app.get('/api/user/dashboard', requireUserSession, async (request, response) => {
     try {
-      const dashboard = await loadUserDashboard(session.userId);
+      const dashboard = await loadUserDashboard(request.session.userId);
 
       if (!dashboard) {
         response.status(404).json({

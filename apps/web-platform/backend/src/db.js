@@ -2,6 +2,11 @@ import pg from 'pg';
 
 const { Pool } = pg;
 
+function readTrimmedEnv(name) {
+  const value = process.env[name];
+  return typeof value === 'string' ? value.trim() : value;
+}
+
 function isTruthy(value) {
   return ['1', 'true', 'yes', 'on'].includes(String(value || '').toLowerCase());
 }
@@ -17,16 +22,16 @@ function hasExplicitSslSetting() {
 
 function createSslConfig() {
   const sslMode = (
-    process.env.DB_SSL_MODE ||
-    process.env.PGSSLMODE ||
+    readTrimmedEnv('DB_SSL_MODE') ||
+    readTrimmedEnv('PGSSLMODE') ||
     ''
   ).toLowerCase();
   const rejectUnauthorized = !['false', '0', 'no', 'off'].includes(
-    String(process.env.DB_SSL_REJECT_UNAUTHORIZED || 'true').toLowerCase()
+    String(readTrimmedEnv('DB_SSL_REJECT_UNAUTHORIZED') || 'true').toLowerCase()
   );
   const sslModeRequiresTls = ['require', 'verify-ca', 'verify-full', 'no-verify'].includes(sslMode);
   const sslDisabledByMode = ['', 'disable', 'allow', 'prefer'].includes(sslMode);
-  const sslEnabled = isTruthy(process.env.DB_SSL) || (!sslDisabledByMode && sslModeRequiresTls);
+  const sslEnabled = isTruthy(readTrimmedEnv('DB_SSL')) || (!sslDisabledByMode && sslModeRequiresTls);
 
   if (!sslEnabled) {
     return undefined;
@@ -51,23 +56,25 @@ function createSslConfig() {
 
 function createPoolConfig() {
   const ssl = createSslConfig();
+  const databaseUrl = readTrimmedEnv('DATABASE_URL');
+  const dbHost = readTrimmedEnv('DB_HOST');
 
-  if (process.env.DATABASE_URL) {
+  if (databaseUrl) {
     return {
-      connectionString: process.env.DATABASE_URL,
+      connectionString: databaseUrl,
       ...(ssl ? { ssl } : {})
     };
   }
 
-  if (process.env.DB_HOST) {
+  if (dbHost) {
     const shouldApplyDefaultSplitDbSsl = !ssl && !hasExplicitSslSetting();
 
     return {
-      host: process.env.DB_HOST,
-      port: Number(process.env.DB_PORT || 5432),
-      database: process.env.DB_NAME,
-      user: process.env.DB_USER,
-      password: process.env.DB_PASSWORD,
+      host: dbHost,
+      port: Number(readTrimmedEnv('DB_PORT') || 5432),
+      database: readTrimmedEnv('DB_NAME'),
+      user: readTrimmedEnv('DB_USER'),
+      password: readTrimmedEnv('DB_PASSWORD'),
       ...(ssl
         ? { ssl }
         : shouldApplyDefaultSplitDbSsl
