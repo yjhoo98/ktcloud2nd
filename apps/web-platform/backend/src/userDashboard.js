@@ -6,6 +6,20 @@ const MODE_LABELS = {
   3: 'Off'
 };
 
+const MODEL_IMAGE_MAP = {
+  1: '/models/avante.png',
+  2: '/models/grandeur.png',
+  3: '/models/santafe.png',
+  4: '/models/tucson.png'
+};
+
+const MODEL_NAME_MAP = {
+  1: 'Avante',
+  2: 'Grandeur',
+  3: 'Santafe',
+  4: 'Tucson'
+};
+
 function formatDateTime(epochSeconds) {
   if (!epochSeconds) return '-';
 
@@ -132,6 +146,7 @@ export async function loadUserDashboard(userId) {
         a.user_id AS "userId",
         a.user_name AS "userName",
         vm.vehicle_id AS "vehicleId",
+        vm.model_code AS "modelCode",
         mc.model_name AS "modelName",
         mc.image_url AS "imageUrl"
       FROM accounts a
@@ -201,8 +216,14 @@ export async function loadUserDashboard(userId) {
 
   return {
     header: {
-      imageUrl: account.imageUrl || '/models/grandeur.png',
-      model: account.modelName || 'Vehicle',
+      imageUrl:
+        account.imageUrl ||
+        MODEL_IMAGE_MAP[toNumber(account.modelCode, null)] ||
+        '/models/grandeur.png',
+      model:
+        account.modelName ||
+        MODEL_NAME_MAP[toNumber(account.modelCode, null)] ||
+        'Vehicle',
       vehicleId: account.vehicleId,
       userName: account.userName || userId,
       connectionStatus: online ? 'Connected' : 'Signal delayed',
