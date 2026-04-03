@@ -1,15 +1,22 @@
 const SUPPORTED_TARGETS = new Set(['all', 'user', 'operator']);
 
-const requestedTarget = (import.meta.env.VITE_APP_TARGET || 'all').toLowerCase();
+function readTrimmedEnv(name, fallback = '') {
+  const value = import.meta.env[name];
+  return typeof value === 'string' ? value.trim() : fallback;
+}
+
+const requestedTarget = readTrimmedEnv('VITE_APP_TARGET', 'all').toLowerCase();
 
 export const appTarget = SUPPORTED_TARGETS.has(requestedTarget)
   ? requestedTarget
   : 'all';
 
 export const appUrls = {
-  user: import.meta.env.VITE_USER_APP_URL || 'https://app.example.com',
-  operator:
-    import.meta.env.VITE_OPERATOR_APP_URL || 'https://admin.example.com'
+  user: readTrimmedEnv('VITE_USER_APP_URL', 'https://app.example.com'),
+  operator: readTrimmedEnv(
+    'VITE_OPERATOR_APP_URL',
+    'https://admin.example.com'
+  )
 };
 
 export function getDefaultPathForRole(role) {
