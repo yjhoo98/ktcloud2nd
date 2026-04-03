@@ -275,6 +275,7 @@ function OperatorAnomalyPage() {
 
   useEffect(() => {
     let cancelled = false;
+    let timeoutId;
 
     async function loadDashboard() {
       try {
@@ -309,16 +310,19 @@ function OperatorAnomalyPage() {
       } finally {
         if (!cancelled) {
           setIsLoading(false);
+          // Schedule the next poll only after the current request settles.
+          timeoutId = window.setTimeout(loadDashboard, REFRESH_INTERVAL_MS);
         }
       }
     }
 
     loadDashboard();
-    const intervalId = window.setInterval(loadDashboard, REFRESH_INTERVAL_MS);
 
     return () => {
       cancelled = true;
-      window.clearInterval(intervalId);
+      if (timeoutId) {
+        window.clearTimeout(timeoutId);
+      }
     };
   }, []);
 
