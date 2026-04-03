@@ -11,8 +11,7 @@ metadata:
 spec:
   ingressClassName: traefik
   rules:
-    - host: app.palja.click
-      http:
+    - http:
         paths:
           - path: /
             pathType: Prefix
