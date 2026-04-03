@@ -48,6 +48,16 @@ output "alb_dns_name" {
   value       = aws_lb.public.dns_name
 }
 
+output "user_app_host" {
+  description = "Public hostname for the user application."
+  value       = var.user_app_host
+}
+
+output "operator_app_host" {
+  description = "Public hostname for the operator application."
+  value       = var.operator_app_host
+}
+
 output "alb_sg_id" {
   description = "ALB security group identifier."
   value       = aws_security_group.alb.id

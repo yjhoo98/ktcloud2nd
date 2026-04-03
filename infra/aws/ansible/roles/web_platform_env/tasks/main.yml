@@ -59,22 +59,39 @@
 
 - name: Ensure operator namespace backend config exists
   vars:
-    operator_app_host_resolved: >-
+    operator_app_host_input: >-
       {{
         operator_app_host
         | default('admin.example.com', true)
+        | regex_replace('/+$', '')
+      }}
+    operator_app_origin_resolved: >-
+      {{
+        operator_app_host_input
+        if operator_app_host_input is match('^https?://')
+        else 'http://' ~ operator_app_host_input
+      }}
+    operator_app_host_resolved: >-
+      {{
+        operator_app_origin_resolved
         | regex_replace('^https?://', '')
         | regex_replace('/.*$', '')
+      }}
+    operator_app_scheme_resolved: >-
+      {{
+        'https'
+        if operator_app_origin_resolved is match('^https://')
+        else 'http'
       }}
     quicksight_allowed_domains_resolved: >-
       {{
         quicksight_allowed_domains
-        | default('https://' ~ operator_app_host_resolved, true)
+        | default(operator_app_origin_resolved, true)
       }}
     grafana_embed_url_resolved: >-
       {{
         grafana_embed_url
-        | default('/grafana/d/k3s-infra-draft/k3s-infra-overview-draft?orgId=1&kiosk', true)
+        | default(operator_app_origin_resolved ~ '/grafana/d/k3s-infra-draft/k3s-infra-overview-draft?orgId=1&kiosk', true)
       }}
   shell: |
     kubectl apply -f - <<EOF
@@ -88,10 +105,12 @@
       DB_PORT: "{{ db_port | string }}"
       DB_NAME: "{{ db_name }}"
       DB_USER: "{{ db_username }}"
+      OPERATOR_APP_HOST: "{{ operator_app_host_resolved }}"
+      APP_PUBLIC_SCHEME: "{{ operator_app_scheme_resolved }}"
       DB_SSL_MODE: "require"
       DB_SSL_REJECT_UNAUTHORIZED: "false"
       GRAFANA_ENABLED: "true"
-      GRAFANA_BASE_URL: "/grafana"
+      GRAFANA_BASE_URL: "{{ operator_app_origin_resolved }}/grafana"
       GRAFANA_EMBED_URL: "{{ grafana_embed_url_resolved }}"
       GRAFANA_ALLOW_EMBED: "true"
       GRAFANA_PROVIDER: "self-hosted"

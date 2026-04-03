@@ -66,6 +66,30 @@ variable "enable_multi_nat" {
   default     = false
 }
 
+variable "create_public_dns_records" {
+  description = "Whether to create public Route53 alias records for the user and operator apps."
+  type        = bool
+  default     = true
+}
+
+variable "public_hosted_zone_name" {
+  description = "Public Route53 hosted zone name used for app ingress records."
+  type        = string
+  default     = "palja.click"
+}
+
+variable "user_app_host" {
+  description = "Public hostname for the user application."
+  type        = string
+  default     = "app.palja.click"
+}
+
+variable "operator_app_host" {
+  description = "Public hostname for the operator application."
+  type        = string
+  default     = "admin.palja.click"
+}
+
 variable "tags" {
   description = "Additional tags applied to all resources."
   type        = map(string)
