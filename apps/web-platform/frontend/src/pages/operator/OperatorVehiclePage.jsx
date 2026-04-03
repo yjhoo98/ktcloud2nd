@@ -83,11 +83,19 @@ function formatCount(value) {
 }
 
 function formatFuelLevel(value) {
+  if (value === null || value === undefined) {
+    return '-';
+  }
+
   const numeric = Number(value);
   return Number.isFinite(numeric) ? `${numeric.toFixed(1)}%` : '-';
 }
 
 function formatSpeed(value) {
+  if (value === null || value === undefined) {
+    return '-';
+  }
+
   const numeric = Number(value);
   return Number.isFinite(numeric) ? `${Math.round(numeric)} km/h` : '-';
 }

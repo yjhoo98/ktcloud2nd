@@ -205,7 +205,8 @@ function buildStatusBreakdown(rows) {
     counts[row.status] += 1;
   });
 
-  const totalTrackedVehicles = rows.length;
+  const totalTrackedVehicles =
+    counts.driving + counts.engine_off + counts.stopped;
 
   return {
     totalTrackedVehicles,
