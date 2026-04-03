@@ -45,17 +45,6 @@
     mode: "0644"
   run_once: true
 
-- name: Apply Grafana dashboard ConfigMap
-  shell: >
-    kubectl create configmap grafana-provisioned-dashboards
-    --namespace operator-app
-    --from-file=/tmp/kube-prometheus-stack/dashboards
-    --dry-run=client -o yaml
-    | kubectl apply -f -
-  environment:
-    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
-  run_once: true
-
 - name: Check Grafana deployment status
   shell: kubectl get deployment kube-prometheus-stack-grafana --namespace operator-app 2>/dev/null && echo "exists" || echo "not-found"
   environment:
@@ -114,6 +103,7 @@
     --set grafana.env.GF_SECURITY_ALLOW_EMBEDDING=true
     --set grafana.env.GF_AUTH_ANONYMOUS_ENABLED=true
     --set grafana.env.GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
+    --set-file grafana.dashboards.default.k3s-infra-overview=/tmp/kube-prometheus-stack/dashboards/k3s-infra-overview.json
     --set grafana.tolerations[0].key=nodetype
     --set grafana.tolerations[0].operator=Equal
     --set grafana.tolerations[0].value=operator
