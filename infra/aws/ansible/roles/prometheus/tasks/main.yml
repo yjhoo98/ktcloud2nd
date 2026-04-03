@@ -112,7 +112,6 @@
     --set grafana.env.GF_SERVER_ROOT_URL="%(protocol)s://%(domain)s/grafana/"
     --set grafana.env.GF_SERVER_SERVE_FROM_SUB_PATH=true
     --set grafana.env.GF_SECURITY_ALLOW_EMBEDDING=true
-    --set grafana.env.GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH=/var/lib/grafana/dashboards/default/k3s-infra-overview.json
     --set grafana.env.GF_AUTH_ANONYMOUS_ENABLED=true
     --set grafana.env.GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
     --set grafana.tolerations[0].key=nodetype
