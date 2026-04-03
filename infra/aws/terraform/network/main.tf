@@ -1,12 +1,21 @@
 locals {
-  public_subnet_roles = ["edge-ops", "edge-public"]
-  private_app_roles   = ["shared-app-a", "shared-app-c"]
-  private_db_roles    = ["db-a", "db-c"]
+  public_subnet_roles                = ["edge-ops", "edge-public"]
+  private_app_roles                  = ["shared-app-a", "shared-app-c"]
+  private_db_roles                   = ["db-a", "db-c"]
+  public_hosted_zone_name_normalized = trimsuffix(var.public_hosted_zone_name, ".")
+  user_app_host                      = "app.${local.public_hosted_zone_name_normalized}"
+  operator_app_host                  = "admin.${local.public_hosted_zone_name_normalized}"
 
   private_app_nat_gateway_index = {
     for idx, subnet in var.private_app_subnet_cidrs :
     idx => (var.enable_multi_nat ? idx : 0)
   }
+}
+
+data "aws_route53_zone" "public" {
+  count        = var.create_public_dns_records ? 1 : 0
+  name         = "${local.public_hosted_zone_name_normalized}."
+  private_zone = false
 }
 
 resource "aws_vpc" "this" {
@@ -60,9 +69,9 @@ resource "aws_subnet" "private_app" {
 resource "aws_subnet" "db" {
   count = length(var.db_subnet_cidrs)
 
-  vpc_id            = aws_vpc.this.id
-  cidr_block        = var.db_subnet_cidrs[count.index]
-  availability_zone = var.availability_zones[count.index]
+  vpc_id                  = aws_vpc.this.id
+  cidr_block              = var.db_subnet_cidrs[count.index]
+  availability_zone       = var.availability_zones[count.index]
   map_public_ip_on_launch = true # RDS가 공인 IP를 가짐
 
   tags = {
@@ -138,7 +147,7 @@ resource "aws_route_table_association" "private_app" {
 }
 
 resource "aws_route_table" "db" {
-  count = length(var.db_subnet_cidrs)
+  count  = length(var.db_subnet_cidrs)
   vpc_id = aws_vpc.this.id
 
   route {
@@ -308,5 +317,33 @@ resource "aws_lb_listener" "http" {
   default_action {
     type             = "forward"
     target_group_arn = aws_lb_target_group.worker_http.arn
+  }
+}
+
+resource "aws_route53_record" "user_app_alias" {
+  count           = var.create_public_dns_records ? 1 : 0
+  zone_id         = data.aws_route53_zone.public[0].zone_id
+  name            = local.user_app_host
+  type            = "A"
+  allow_overwrite = true
+
+  alias {
+    name                   = aws_lb.public.dns_name
+    zone_id                = aws_lb.public.zone_id
+    evaluate_target_health = true
+  }
+}
+
+resource "aws_route53_record" "operator_app_alias" {
+  count           = var.create_public_dns_records ? 1 : 0
+  zone_id         = data.aws_route53_zone.public[0].zone_id
+  name            = local.operator_app_host
+  type            = "A"
+  allow_overwrite = true
+
+  alias {
+    name                   = aws_lb.public.dns_name
+    zone_id                = aws_lb.public.zone_id
+    evaluate_target_health = true
   }
 }
