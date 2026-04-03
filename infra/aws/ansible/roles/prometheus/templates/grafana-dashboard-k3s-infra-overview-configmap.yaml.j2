@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-k3s-infra-overview
+  namespace: operator-app
+  labels:
+    grafana_dashboard: "1"
+data:
+  k3s-infra-overview.json: |
+{{ lookup('file', role_path ~ '/files/grafana-dashboards/k3s-infra-overview.json') | indent(4, true) }}

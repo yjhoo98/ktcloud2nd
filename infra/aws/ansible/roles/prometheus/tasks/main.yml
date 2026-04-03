@@ -45,11 +45,17 @@
     mode: "0644"
   run_once: true
 
-- name: Render custom Grafana dashboard values
+- name: Render custom Grafana dashboard ConfigMap
   template:
-    src: custom-grafana-dashboard-values.yaml.j2
-    dest: /tmp/kube-prometheus-stack/custom-grafana-dashboard-values.yaml
+    src: grafana-dashboard-k3s-infra-overview-configmap.yaml.j2
+    dest: /tmp/kube-prometheus-stack/grafana-dashboard-k3s-infra-overview-configmap.yaml
     mode: "0644"
+  run_once: true
+
+- name: Apply custom Grafana dashboard ConfigMap for sidecar discovery
+  command: kubectl apply -f /tmp/kube-prometheus-stack/grafana-dashboard-k3s-infra-overview-configmap.yaml
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
   run_once: true
 
 - name: Check Grafana deployment status
@@ -96,7 +102,6 @@
     --create-namespace
     --timeout 15m
     --values /tmp/kube-prometheus-stack/kube-prometheus-stack-values.yaml
-    --values /tmp/kube-prometheus-stack/custom-grafana-dashboard-values.yaml
     --set prometheusOperator.admissionWebhooks.enabled=false
     --set prometheusOperator.admissionWebhooks.patch.enabled=false
     --set prometheusOperator.tls.enabled=false
@@ -111,6 +116,8 @@
     --set grafana.env.GF_SECURITY_ALLOW_EMBEDDING=true
     --set grafana.env.GF_AUTH_ANONYMOUS_ENABLED=true
     --set grafana.env.GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
+    --set grafana.sidecar.dashboards.enabled=true
+    --set grafana.sidecar.dashboards.label=grafana_dashboard
     --set grafana.tolerations[0].key=nodetype
     --set grafana.tolerations[0].operator=Equal
     --set grafana.tolerations[0].value=operator

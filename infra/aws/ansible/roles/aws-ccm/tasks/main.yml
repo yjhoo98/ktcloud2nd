@@ -1,18 +1,18 @@
 ---
-- name: K3s config에 disable-cloud-controller 설정 추가
+- name: Ensure K3s disables the in-tree cloud controller
   lineinfile:
     path: /etc/rancher/k3s/config.yaml
     line: "disable-cloud-controller: true"
     create: yes
   register: k3s_config_changed
 
-- name: K3s 서비스 재시작 (설정 변경 시)
+- name: Restart K3s when config changes
   systemd:
     name: k3s
     state: restarted
   when: k3s_config_changed.changed
 
-- name: K3s 재시작 후 API 서버 준비 대기
+- name: Wait for K3s API after restart
   command: kubectl get nodes
   environment:
     KUBECONFIG: /etc/rancher/k3s/k3s.yaml
@@ -23,24 +23,24 @@
   failed_when: false
   when: k3s_config_changed.changed
 
-- name: AWS CCM Helm repo 추가
+- name: Add AWS CCM Helm repo
   command: helm repo add aws-cloud-controller-manager https://kubernetes.github.io/cloud-provider-aws --force-update
   environment:
     KUBECONFIG: /etc/rancher/k3s/k3s.yaml
   run_once: true
 
-- name: Helm repo 업데이트
+- name: Update Helm repo cache
   command: helm repo update
   environment:
     KUBECONFIG: /etc/rancher/k3s/k3s.yaml
   run_once: true
 
-- name: AWS CCM values 파일 복사
+- name: Upload AWS CCM values
   copy:
     src: aws-ccm-values.yaml
     dest: /tmp/aws-ccm-values.yaml
 
-- name: AWS CCM 배포
+- name: Install AWS CCM
   command: >
     helm upgrade --install aws-cloud-controller-manager
     aws-cloud-controller-manager/aws-cloud-controller-manager
@@ -50,9 +50,17 @@
     KUBECONFIG: /etc/rancher/k3s/k3s.yaml
   run_once: true
 
-- name: AWS CCM 파드 준비 완료 대기
+- name: Wait for AWS CCM rollout
   command: kubectl rollout status daemonset/aws-cloud-controller-manager -n kube-system --timeout=180s
   environment:
     KUBECONFIG: /etc/rancher/k3s/k3s.yaml
   run_once: true
-  ignore_errors: yes
+  register: aws_ccm_rollout_status
+  failed_when: false
+  changed_when: false
+
+- name: Warn when AWS CCM rollout is delayed
+  debug:
+    msg: "AWS CCM rollout did not finish within the timeout. Continuing with the remaining steps."
+  when: aws_ccm_rollout_status.rc != 0
+  run_once: true
