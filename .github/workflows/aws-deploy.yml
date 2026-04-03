@@ -584,8 +584,9 @@ jobs:
           QUICKSIGHT_SESSION_LIFETIME_MINUTES: ${{ vars.QUICKSIGHT_SESSION_LIFETIME_MINUTES }}
           QUICKSIGHT_NAMESPACE: ${{ vars.QUICKSIGHT_NAMESPACE }}
           GRAFANA_EMBED_URL: ${{ vars.GRAFANA_EMBED_URL }}
-          OPERATOR_APP_HOST: admin.palja.click
         run: |
+          PUBLIC_HOSTED_ZONE_NAME="${{ vars.PUBLIC_HOSTED_ZONE_NAME || 'palja.click' }}"
+          OPERATOR_APP_HOST="admin.${PUBLIC_HOSTED_ZONE_NAME#.}"
           ansible-playbook -i inventory/hosts.ini \
             --vault-password-file vault/vault_pass \
             -e "db_password=$DB_PASS" \
