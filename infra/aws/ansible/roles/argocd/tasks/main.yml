@@ -59,7 +59,7 @@
     KUBECONFIG: /etc/rancher/k3s/k3s.yaml
   run_once: true
 
-- name: DB Secret 생성 (login, user-app, operator-app 네임스페이스)
+- name: Ensure app namespaces have Linkerd injection enabled
   shell: |
     for NS in login user-app operator-app; do
       kubectl apply -f - <<NSEOF
@@ -70,14 +70,6 @@
       annotations:
         linkerd.io/inject: enabled
     NSEOF
-      kubectl create secret generic db-secret \
-        --namespace=$NS \
-        --from-literal=DB_HOST=db.vehicle.internal \
-        --from-literal=DB_PORT=5432 \
-        --from-literal=DB_NAME=vehicle_db \
-        --from-literal=DB_USER=dbadmin \
-        --from-literal=DB_PASSWORD={{ db_password }} \
-        --dry-run=client -o yaml | kubectl apply -f -
     done
   environment:
     KUBECONFIG: /etc/rancher/k3s/k3s.yaml

@@ -5,11 +5,19 @@
   become: yes
   vars_files:
     - ../vault/vault.yml
-    - ../roles/db_setup/vars/main.yml
   vars:
     db_password: "{{ lookup('aws_ssm', '/config/vehicle/db_password', decrypt=True, region='ap-northeast-2') }}"
+    db_endpoint_resolved: "{{ db_endpoint | default('db.vehicle.internal', true) }}"
+    db_username_resolved: "{{ db_username | default('dbadmin', true) }}"
+    db_name_resolved: "{{ db_name | default('vehicle_db', true) }}"
+    db_port_resolved: "{{ db_port | default(5432, true) | int }}"
   roles:
-    - k3s_master
+    - role: k3s_master
+      vars:
+        db_endpoint: "{{ db_endpoint_resolved }}"
+        db_username: "{{ db_username_resolved }}"
+        db_name: "{{ db_name_resolved }}"
+        db_port: "{{ db_port_resolved }}"
 
 - name: Initialize database schema from master node
   hosts: masters[0]
@@ -17,6 +25,10 @@
   gather_facts: yes
   vars:
     db_password: "{{ lookup('aws_ssm', '/config/vehicle/db_password', decrypt=True, region='ap-northeast-2') }}"
+    db_endpoint_resolved: "{{ db_endpoint | default('db.vehicle.internal', true) }}"
+    db_username_resolved: "{{ db_username | default('dbadmin', true) }}"
+    db_name_resolved: "{{ db_name | default('vehicle_db', true) }}"
+    db_port_resolved: "{{ db_port | default(5432, true) | int }}"
   tasks:
     - name: Install PostgreSQL Python driver
       apt:
@@ -30,6 +42,10 @@
       vars:
         ansible_python_interpreter: /usr/bin/python3
         db_password: "{{ db_password }}"
+        db_endpoint: "{{ db_endpoint_resolved }}"
+        db_username: "{{ db_username_resolved }}"
+        db_name: "{{ db_name_resolved }}"
+        db_port: "{{ db_port_resolved }}"
 
 - name: Install Linkerd
   hosts: masters
@@ -61,12 +77,19 @@
 - name: Provision web-platform backend env and secrets
   hosts: masters
   become: yes
-  vars_files:
-    - ../roles/db_setup/vars/main.yml
   vars:
     db_password: "{{ lookup('aws_ssm', '/config/vehicle/db_password', decrypt=True, region='ap-northeast-2') }}"
+    db_endpoint_resolved: "{{ db_endpoint | default('db.vehicle.internal', true) }}"
+    db_username_resolved: "{{ db_username | default('dbadmin', true) }}"
+    db_name_resolved: "{{ db_name | default('vehicle_db', true) }}"
+    db_port_resolved: "{{ db_port | default(5432, true) | int }}"
   roles:
-    - web_platform_env
+    - role: web_platform_env
+      vars:
+        db_endpoint: "{{ db_endpoint_resolved }}"
+        db_username: "{{ db_username_resolved }}"
+        db_name: "{{ db_name_resolved }}"
+        db_port: "{{ db_port_resolved }}"
 
 - name: Install ArgoCD applications
   hosts: masters

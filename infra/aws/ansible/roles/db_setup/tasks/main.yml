@@ -2,6 +2,7 @@
 - name: Apply the database schema with PostgreSQL query
   community.postgresql.postgresql_query:
     login_host: "{{ db_endpoint }}"
+    login_port: "{{ db_port }}"
     login_user: "{{ db_username }}"
     login_password: "{{ db_password }}"
     login_db: "{{ db_name }}"
