@@ -19,6 +19,7 @@ import {
 } from './quicksight.js';
 import { getGrafanaEmbedPayload } from './grafana.js';
 import { loadAnomalyDashboard } from './anomalyDashboard.js';
+import { loadOperatorVehicleDashboard } from './operatorVehicleDashboard.js';
 import { loadUserDashboard } from './userDashboard.js';
 
 const app = express();
@@ -555,6 +556,18 @@ if (isEnabledForTarget('login', 'user')) {
 if (isEnabledForTarget('operator')) {
   app.get('/api/grafana/embed', requireOperatorSession, (_request, response) => {
     response.json(getGrafanaEmbedPayload());
+  });
+
+  app.get('/api/operator/vehicle-dashboard', requireOperatorSession, async (_request, response) => {
+    try {
+      const dashboard = await loadOperatorVehicleDashboard();
+      response.json(dashboard);
+    } catch (error) {
+      response.status(500).json({
+        message: 'Failed to load the operator vehicle dashboard.',
+        details: error.message
+      });
+    }
   });
 
   app.get('/api/anomalies/dashboard', requireOperatorSession, async (_request, response) => {
