@@ -46,16 +46,10 @@
   run_once: true
 
 - name: Render custom Grafana dashboard values
-  copy:
+  template:
+    src: custom-grafana-dashboard-values.yaml.j2
     dest: /tmp/kube-prometheus-stack/custom-grafana-dashboard-values.yaml
     mode: "0644"
-    content: |
-      grafana:
-        dashboards:
-          default:
-            k3s-infra-overview:
-              json: |
-                {{ lookup('file', role_path ~ '/files/grafana-dashboards/k3s-infra-overview.json') | indent(16, true) }}
   run_once: true
 
 - name: Check Grafana deployment status

@@ -1,0 +1,6 @@
+grafana:
+  dashboards:
+    default:
+      k3s-infra-overview:
+        json: |
+{{ lookup('file', role_path ~ '/files/grafana-dashboards/k3s-infra-overview.json') | indent(10, true) }}
