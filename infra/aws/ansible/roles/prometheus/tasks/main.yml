@@ -55,7 +55,7 @@
           default:
             k3s-infra-overview:
               json: |
-{{ lookup('file', role_path ~ '/files/grafana-dashboards/k3s-infra-overview.json') | indent(16, true) }}
+                {{ lookup('file', role_path ~ '/files/grafana-dashboards/k3s-infra-overview.json') | indent(16, true) }}
   run_once: true
 
 - name: Check Grafana deployment status
