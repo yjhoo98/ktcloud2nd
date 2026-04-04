@@ -35,7 +35,7 @@ producer = KafkaProducer(
 LAT_MIN, LAT_MAX = 37.40, 37.70
 LON_MIN, LON_MAX = 126.70, 127.20
 
-#50대의 차량 초기 상태 생성
+#100대의 차량 초기 상태 생성
 vehicles = [
     {
         "vehicle_id": f"car_{i+1}",
@@ -47,7 +47,7 @@ vehicles = [
         "fuel_level": round(random.uniform(5, 100), 2),
         "last_anomaly_at": 0 # 쿨다운 값
     }
-    for i in range(500)
+    for i in range(100)
 ]
 
 def clamp(value, min_value, max_value):
@@ -106,21 +106,21 @@ def simulate_vehicle(vehicle):
     while True:
         roll = random.random()
         now = time.time()
-        anomaly_cooldown_seconds = 300  # 5분
+        anomaly_cooldown_seconds = 600  # 10분
         can_emit_anomaly = now - vehicle.get("last_anomaly_at", 0) >= anomaly_cooldown_seconds
 
         # 이상 데이터 발생 구간 (차량별 5분 쿨다운)
-        if can_emit_anomaly and roll < 0.005:  # 미수신 (30초 잠수)
+        if can_emit_anomaly and roll < 0.0003:  # 미수신 (30초 잠수)
             vehicle["last_anomaly_at"] = now
             time.sleep(30)
             continue
-        elif can_emit_anomaly and roll < 0.0075:  # 폭주
+        elif can_emit_anomaly and roll < 0.001:  # 폭주
             vehicle["last_anomaly_at"] = now
             for _ in range(5):
                 send_to_kafka(vehicle, 1, 1)
                 time.sleep(0.1)
             continue
-        elif can_emit_anomaly and roll < 0.01:  # GPS 도약
+        elif can_emit_anomaly and roll < 0.0015:  # GPS 도약
             vehicle["last_anomaly_at"] = now
             tmp_lat = vehicle["lat"]
             vehicle["lat"] += 1.2
@@ -134,18 +134,29 @@ def simulate_vehicle(vehicle):
             vehicle["engine_on"] = not vehicle["engine_on"]
         
         if vehicle["engine_on"]:
-            if random.random() < 0.95: # 주행 중 (Driving)
-                vehicle["speed"] = random.randint(30, 100)
-                vehicle["fuel_level"] = max(0, vehicle["fuel_level"] - random.uniform(0.1, 0.5))
+            if random.random() < 0.95:  # 주행 중 (Driving)
+                base_speed = int(clamp(vehicle["speed"] + random.randint(-8, 8), 20, 100))
+
+                if can_emit_anomaly and random.random() < 0.001:
+                    vehicle["last_anomaly_at"] = now
+                    vehicle["speed"] = int(clamp(base_speed + random.randint(60, 80), 0, 140))
+                elif can_emit_anomaly and random.random() < 0.001:
+                    vehicle["last_anomaly_at"] = now
+                    vehicle["speed"] = int(clamp(base_speed - random.randint(60, 80), 0, 140))
+                else:
+                    vehicle["speed"] = base_speed
+
+                vehicle["fuel_level"] = max(0, vehicle["fuel_level"] - random.uniform(0.02, 0.08))
                 vehicle["lat"] += random.uniform(-0.001, 0.001) * (vehicle["speed"] / 50)
                 vehicle["lon"] += random.uniform(-0.001, 0.001) * (vehicle["speed"] / 50)
-                mode, event_type, interval = 1, 1, 1.0 # 1초 주기
-            else: # 시동 ON, 정차 중 (Stopped)
+                mode, event_type, interval = 1, 1, 1.0  # 1초 주기
+            else:  # 시동 ON, 정차 중 (Stopped)
                 vehicle["speed"] = 0
-                mode, event_type, interval = 2, 1, 5.0 # 5초 주기
-        else: # 시동 OFF (Off)
+                mode, event_type, interval = 2, 1, 5.0  # 5초 주기
+        else:  # 시동 OFF (Off)
             vehicle["speed"] = 0
-            mode, event_type, interval = 3, 2, 30.0 # 30초 주기 (Heartbeat)
+            mode, event_type, interval = 3, 2, 30.0  # 30초 주기 (Heartbeat)
+
 
         # 좌표 제한 및 전송
         vehicle["lat"] = round(clamp(vehicle["lat"], 30.0, 45.0), 6)
