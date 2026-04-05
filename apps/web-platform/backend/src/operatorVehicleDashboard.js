@@ -4,6 +4,8 @@ const REFRESH_INTERVAL_SECONDS = 5;
 const DELAY_WARNING_SECONDS = 15;
 const OFFLINE_THRESHOLD_SECONDS = 60;
 const IDLE_WARNING_SECONDS = 60;
+const DRIVING_TREND_BUCKET_SECONDS = 300;
+const DRIVING_TREND_POINTS = 12;
 
 const STATUS_META = {
   driving: {
@@ -57,6 +59,19 @@ function formatDateTime(epochSeconds) {
   })
     .format(new Date(Number(epochSeconds) * 1000))
     .replace(',', '');
+}
+
+function formatTimeLabel(epochSeconds) {
+  if (!epochSeconds) {
+    return '--:--';
+  }
+
+  return new Intl.DateTimeFormat('ko-KR', {
+    timeZone: 'Asia/Seoul',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  }).format(new Date(Number(epochSeconds) * 1000));
 }
 
 function toEpochSeconds(value) {
@@ -367,10 +382,21 @@ function buildIdleVehicles(rows, latestByVehicleId, nowSeconds) {
     .slice(0, 8);
 }
 
+function buildDrivingTrend(rows) {
+  return rows.map((row) => ({
+    timestampSeconds: toEpochSeconds(row.bucketEpoch),
+    label: formatTimeLabel(row.bucketEpoch),
+    value: Number(row.drivingVehicles || 0)
+  }));
+}
+
 export async function loadOperatorVehicleDashboard() {
   const nowSeconds = Math.floor(Date.now() / 1000);
+  const alignedBucketNow = nowSeconds - (nowSeconds % DRIVING_TREND_BUCKET_SECONDS);
+  const trendStart =
+    alignedBucketNow - (DRIVING_TREND_BUCKET_SECONDS * (DRIVING_TREND_POINTS - 1));
 
-  const [latestVehiclesResult, recentStatsResult] = await Promise.all([
+  const [latestVehiclesResult, recentStatsResult, drivingTrendResult] = await Promise.all([
     query(`
       WITH vehicle_ids AS (
         SELECT vehicle_id FROM vehicle_master
@@ -431,7 +457,26 @@ export async function loadOperatorVehicleDashboard() {
       FROM ranked_stats
       WHERE row_number <= 24
       ORDER BY "vehicleId" ASC, timestamp DESC
-    `)
+    `),
+    query(
+      `
+        WITH buckets AS (
+          SELECT generate_series($1, $2, $3) AS "bucketEpoch"
+        )
+        SELECT
+          buckets."bucketEpoch",
+          COUNT(DISTINCT stats.vehicle_id)::int AS "drivingVehicles"
+        FROM buckets
+        LEFT JOIN vehicle_stats stats
+          ON stats.timestamp >= buckets."bucketEpoch"
+         AND stats.timestamp < buckets."bucketEpoch" + $3
+         AND stats.engine_on = true
+         AND (COALESCE(stats.speed, 0) > 0 OR stats.mode = 1)
+        GROUP BY buckets."bucketEpoch"
+        ORDER BY buckets."bucketEpoch" ASC
+      `,
+      [trendStart, alignedBucketNow, DRIVING_TREND_BUCKET_SECONDS]
+    )
   ]);
 
   const latestRows = latestVehiclesResult.rows.map((row) => formatVehicleRow(row, nowSeconds));
@@ -462,8 +507,19 @@ export async function loadOperatorVehicleDashboard() {
     return compareVehicleIds(left.vehicleId, right.vehicleId);
   });
 
+  const latestVehicleTimestamp = latestRows.reduce((latest, row) => {
+    if (row.timestampSeconds === null || row.timestampSeconds === undefined) {
+      return latest;
+    }
+
+    return latest === null || row.timestampSeconds > latest
+      ? row.timestampSeconds
+      : latest;
+  }, null);
+
   return {
     generatedAt: formatDateTime(nowSeconds),
+    latestVehicleUpdatedAt: formatDateTime(latestVehicleTimestamp),
     refreshIntervalSeconds: REFRESH_INTERVAL_SECONDS,
     thresholds: {
       delayedSeconds: DELAY_WARNING_SECONDS,
@@ -473,6 +529,7 @@ export async function loadOperatorVehicleDashboard() {
     summary: buildSummary(latestRows),
     statusBreakdown: buildStatusBreakdown(latestRows),
     fuelSummary: buildFuelSummary(latestRows),
+    drivingTrend: buildDrivingTrend(drivingTrendResult.rows),
     vehicleTable: sortedVehicleTable,
     delayedVehicles: buildDelayedVehicles(latestRows),
     idleVehicles: buildIdleVehicles(latestRows, latestByVehicleId, nowSeconds)

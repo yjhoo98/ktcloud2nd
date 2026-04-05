@@ -20,8 +20,8 @@ function DashboardLayout({
   const resolvedRole = role || session?.role?.toUpperCase() || 'USER';
   const resolvedUserId =
     userId ||
-    session?.user?.userId ||
     session?.user?.userName ||
+    session?.user?.userId ||
     'guest';
 
   const handleTabClick = (path) => {

@@ -145,12 +145,6 @@ function LoginPage({ allowedRole = null }) {
         </div>
 
         <h1>{mode === 'login' ? `${portalName} Login` : `${portalName} Sign Up`}</h1>
-        <p>
-          {mode === 'login'
-            ? 'Sign in to continue to your assigned application.'
-            : 'Create a new account to access the user application.'}
-        </p>
-
         {errorMessage ? <div className="auth-message error">{errorMessage}</div> : null}
         {successMessage ? (
           <div className="auth-message success">{successMessage}</div>
@@ -159,13 +153,13 @@ function LoginPage({ allowedRole = null }) {
         {mode === 'login' ? (
           <form onSubmit={handleLoginSubmit} className="login-form">
             <label>
-              User ID
+              ID
               <input
                 type="text"
                 name="userId"
                 value={loginForm.userId}
                 onChange={handleLoginChange}
-                placeholder="Enter your user ID"
+                placeholder="아이디"
               />
             </label>
 
@@ -176,7 +170,7 @@ function LoginPage({ allowedRole = null }) {
                 name="password"
                 value={loginForm.password}
                 onChange={handleLoginChange}
-                placeholder="Enter your password"
+                placeholder="비밀번호"
               />
             </label>
 

@@ -7,8 +7,8 @@ const numberFormatter = new Intl.NumberFormat('ko-KR');
 
 const operatorTabs = [
   { label: '이상 탐지', path: '/operator/anomaly' },
-  { label: '차량', path: '/operator/vehicle' },
-  { label: '인프라 서비스', path: '/operator/infra-service' }
+  { label: '차량 현황', path: '/operator/vehicle' },
+  { label: '인프라 모니터링', path: '/operator/infra-service' }
 ];
 
 const KPI_ITEMS = [

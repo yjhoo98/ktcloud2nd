@@ -48,13 +48,13 @@ function UserRoutes() {
 function OperatorRoutes() {
   return (
     <Routes>
-      <Route path="/" element={<Navigate to="/operator/infra-service" replace />} />
+      <Route path="/" element={<Navigate to="/operator/anomaly" replace />} />
       <Route
         path="/login"
         element={
           <LoginRoute
             allowedRole="operator"
-            defaultPath="/operator/infra-service"
+            defaultPath="/operator/anomaly"
           />
         }
       />
@@ -90,7 +90,7 @@ function OperatorRoutes() {
           </ProtectedRoute>
         }
       />
-      <Route path="*" element={<Navigate to="/operator/infra-service" replace />} />
+      <Route path="*" element={<Navigate to="/operator/anomaly" replace />} />
     </Routes>
   );
 }
