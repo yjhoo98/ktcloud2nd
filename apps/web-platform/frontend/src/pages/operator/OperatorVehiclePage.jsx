@@ -1,27 +1,38 @@
-import { useEffect, useMemo, useState } from 'react';
+﻿import { useEffect, useMemo, useState } from 'react';
 import DashboardLayout from '../../components/DashboardLayout';
 import { fetchOperatorVehicleDashboard } from '../../api/operatorVehicleDashboard';
 
-const REFRESH_INTERVAL_MS = 1 * 1000;
+const REFRESH_INTERVAL_MS = 1000;
 const numberFormatter = new Intl.NumberFormat('ko-KR');
+
 const KPI_DISPLAY_ORDER = [
   'totalVehicles',
   'drivingVehicles',
   'stoppedVehicles',
   'engineOffVehicles'
 ];
+
 const KPI_LABELS = {
   totalVehicles: '전체 차량',
   drivingVehicles: '운행 중 차량',
   stoppedVehicles: '정차 차량',
   engineOffVehicles: '시동 OFF 차량'
 };
+
 const STATUS_FILTER_OPTIONS = [
   { value: 'all', label: '전체' },
   { value: 'driving', label: '운행 중' },
   { value: 'stopped', label: '정차' },
-  { value: 'engine_off', label: '시동 꺼짐' }
+  { value: 'engine_off', label: '시동 OFF' }
 ];
+
+const STATUS_COLOR_MAP = {
+  driving: '#57c2ff',
+  stopped: '#6c72ff',
+  engine_off: '#cb3cff',
+  offline: '#8b5cf6',
+  no_data: '#8ea0c7'
+};
 
 const operatorTabs = [
   { label: '이상 탐지', path: '/operator/anomaly' },
@@ -29,53 +40,18 @@ const operatorTabs = [
   { label: '인프라 모니터링', path: '/operator/infra-service' }
 ];
 
-const KPI_ITEMS = [
-  {
-    key: 'totalVehicles',
-    label: '전체 차량 수',
-    helper: '최근 수집 기준 전체 추적 차량'
-  },
-  {
-    key: 'drivingVehicles',
-    label: '운행 중 차량 수',
-    helper: '주행 데이터가 확인된 차량'
-  },
-  {
-    key: 'engineOffVehicles',
-    label: '시동 꺼짐 차량 수',
-    helper: '엔진 OFF 상태 차량'
-  },
-  {
-    key: 'stoppedVehicles',
-    label: '정차 차량 수',
-    helper: '엔진 ON 상태 정차 차량'
-  }
-];
-
 const INITIAL_STATUS_ITEMS = [
-  { key: 'driving', label: '운행 중', value: 0, ratio: 0, color: '#2f6b8a' },
-  { key: 'engine_off', label: '시동 꺼짐', value: 0, ratio: 0, color: '#8fd2ee' },
-  { key: 'stopped', label: '정차', value: 0, ratio: 0, color: '#f3a145' },
-  { key: 'offline', label: '오프라인', value: 0, ratio: 0, color: '#d054bf' },
-  { key: 'no_data', label: '데이터 없음', value: 0, ratio: 0, color: '#c9d3e3' }
-];
-
-const INITIAL_FUEL_ITEMS = [
-  { key: 'ample', label: '여유', value: 0, ratio: 0, color: '#8fd2ee' },
-  { key: 'normal', label: '보통', value: 0, ratio: 0, color: '#7fb069' },
-  { key: 'low', label: '주의', value: 0, ratio: 0, color: '#f3c15d' },
-  { key: 'critical', label: '위험', value: 0, ratio: 0, color: '#e06b5f' }
+  { key: 'driving', label: '운행 중', value: 0, ratio: 0, color: '#57c2ff' },
+  { key: 'engine_off', label: '시동 OFF', value: 0, ratio: 0, color: '#cb3cff' },
+  { key: 'stopped', label: '정차', value: 0, ratio: 0, color: '#6c72ff' },
+  { key: 'offline', label: '오프라인', value: 0, ratio: 0, color: '#8b5cf6' },
+  { key: 'no_data', label: '데이터 없음', value: 0, ratio: 0, color: '#8ea0c7' }
 ];
 
 const INITIAL_DASHBOARD = {
   generatedAt: '-',
   latestVehicleUpdatedAt: '-',
   refreshIntervalSeconds: 1,
-  thresholds: {
-    delayedSeconds: 15,
-    offlineSeconds: 60,
-    idleSeconds: 60
-  },
   summary: {
     totalVehicles: 0,
     drivingVehicles: 0,
@@ -88,14 +64,8 @@ const INITIAL_DASHBOARD = {
     totalTrackedVehicles: 0,
     items: INITIAL_STATUS_ITEMS
   },
-  fuelSummary: {
-    totalTrackedVehicles: 0,
-    items: INITIAL_FUEL_ITEMS
-  },
-  drivingTrend: [],
   vehicleTable: [],
-  delayedVehicles: [],
-  idleVehicles: []
+  drivingTrend: []
 };
 
 function formatCount(value) {
@@ -118,6 +88,18 @@ function formatSpeed(value) {
 
   const numeric = Number(value);
   return Number.isFinite(numeric) ? `${Math.round(numeric)} km/h` : '-';
+}
+
+function getStatusDisplayLabel(statusKey, fallbackLabel) {
+  const labelMap = {
+    driving: '운행 중',
+    stopped: '정차',
+    engine_off: '시동 OFF',
+    offline: '오프라인',
+    no_data: '데이터 없음'
+  };
+
+  return labelMap[statusKey] || fallbackLabel;
 }
 
 function buildDonutSegments(items, radius) {
@@ -145,18 +127,82 @@ function buildDonutSegments(items, radius) {
     });
 }
 
-function VehicleStatusDonut({ totalVehicles, items }) {
+function buildTimeAxisLabels(series, count = 4) {
+  if (!series.length) {
+    return [];
+  }
+
+  return Array.from({ length: count }, (_, index) => {
+    const position = count === 1 ? 0 : index / (count - 1);
+    const seriesIndex = Math.min(
+      Math.round(position * Math.max(series.length - 1, 0)),
+      series.length - 1
+    );
+
+    return series[seriesIndex]?.label || '-';
+  });
+}
+
+function buildValueAxisLabels(maxValue) {
+  const safeMax = Math.max(0, Number(maxValue) || 0);
+  const midpoint = safeMax / 2;
+
+  return [safeMax, midpoint, 0].map((value) =>
+    numberFormatter.format(Math.round(value))
+  );
+}
+
+function buildLinePath(points, width, height, minValue = 0, maxValue = 0) {
+  if (points.length === 0) {
+    return '';
+  }
+
+  const range = Math.max(maxValue - minValue, 1);
+
+  return points
+    .map((point, index) => {
+      const x = (index / Math.max(points.length - 1, 1)) * width;
+      const clampedValue = Math.min(Math.max(point.value, minValue), maxValue);
+      const y = height - ((clampedValue - minValue) / range) * height;
+      return `${index === 0 ? 'M' : 'L'} ${x.toFixed(1)} ${y.toFixed(1)}`;
+    })
+    .join(' ');
+}
+
+function buildAreaPath(points, width, height, minValue = 0, maxValue = 0) {
+  if (points.length === 0) {
+    return '';
+  }
+
+  const linePath = buildLinePath(points, width, height, minValue, maxValue);
+  return `${linePath} L ${width} ${height} L 0 ${height} Z`;
+}
+
+function VehicleStatusDonut({ items }) {
   const radius = 78;
-  const segments = buildDonutSegments(items, radius);
-  const trackedTotal = items.reduce((sum, item) => sum + item.value, 0);
+  const coloredItems = items.map((item) => ({
+    ...item,
+    color: STATUS_COLOR_MAP[item.key] || item.color
+  }));
+  const segments = buildDonutSegments(coloredItems, radius);
+  const trackedTotal = coloredItems.reduce((sum, item) => sum + item.value, 0);
+  const orderedItems = [...coloredItems].sort((left, right) => {
+    const order = {
+      driving: 0,
+      stopped: 1,
+      engine_off: 2,
+      offline: 3,
+      no_data: 4
+    };
+
+    return (order[left.key] ?? 99) - (order[right.key] ?? 99);
+  });
 
   return (
     <article className="card operator-vehicle-chart-card">
       <div className="operator-vehicle-chart-head">
         <div>
           <p className="operator-vehicle-section-label">차량 상태 분포</p>
-          <h2>차량 상태 비율</h2>
-          <p>실시간 상태가 확인된 차량만 기준으로 운영 비율을 집계합니다.</p>
         </div>
         <span className="operator-vehicle-chart-total">
           상태 집계 {formatCount(trackedTotal)}대
@@ -202,14 +248,16 @@ function VehicleStatusDonut({ totalVehicles, items }) {
         </div>
 
         <ul className="operator-vehicle-legend">
-          {items.map((item) => (
+          {orderedItems.map((item) => (
             <li key={item.key} className="operator-vehicle-legend-item">
               <span
                 className="operator-vehicle-legend-swatch"
                 style={{ backgroundColor: item.color }}
                 aria-hidden="true"
               />
-              <span className="operator-vehicle-legend-label">{item.label}</span>
+              <span className="operator-vehicle-legend-label">
+                {getStatusDisplayLabel(item.key, item.label)}
+              </span>
               <div className="operator-vehicle-legend-values">
                 <strong>{formatCount(item.value)}</strong>
                 <span>{item.ratio.toFixed(1)}%</span>
@@ -222,129 +270,97 @@ function VehicleStatusDonut({ totalVehicles, items }) {
   );
 }
 
-function DrivingTrendCardSafe({ points }) {
-  const normalizedPoints = useMemo(
-    () => points.map((point) => ({ value: Number(point.value || 0), label: point.label || '--:--' })),
-    [points]
-  );
-  const linePath = useMemo(() => buildTrendLinePath(normalizedPoints, 420, 150), [normalizedPoints]);
-  const areaPath = useMemo(() => buildTrendAreaPath(normalizedPoints, 420, 150), [normalizedPoints]);
-  const latestValue = normalizedPoints.length ? normalizedPoints[normalizedPoints.length - 1].value : 0;
-  const axisLabels = useMemo(() => {
-    if (!normalizedPoints.length) {
+function DrivingTrendCard({ series, maxValue }) {
+  const xLabels = useMemo(() => buildTimeAxisLabels(series), [series]);
+  const chartMaxValue = Math.max(0, Number(maxValue) || 0);
+  const yLabels = useMemo(() => buildValueAxisLabels(chartMaxValue), [chartMaxValue]);
+  const points = useMemo(() => {
+    if (!series.length) {
       return [];
     }
 
-    return normalizedPoints.filter((_, index) => (
-      index === 0 ||
-      index === normalizedPoints.length - 1 ||
-      index === Math.floor((normalizedPoints.length - 1) / 2)
-    ));
-  }, [normalizedPoints]);
-  const values = normalizedPoints.map((point) => point.value);
-  const minValue = values.length ? Math.min(...values) : 0;
-  const maxValue = values.length ? Math.max(...values) : 0;
-  const range = maxValue - minValue || 1;
+    const source = series.slice(-60).map((item) => Number(item.value || 0));
+    const targetCount = 72;
+    const interpolated = Array.from({ length: targetCount }, (_, index) => {
+      const position = (index / Math.max(targetCount - 1, 1)) * Math.max(source.length - 1, 0);
+      const leftIndex = Math.floor(position);
+      const rightIndex = Math.min(leftIndex + 1, source.length - 1);
+      const mix = position - leftIndex;
+      const leftValue = source[leftIndex] ?? 0;
+      const rightValue = source[rightIndex] ?? leftValue;
+
+      return leftValue + (rightValue - leftValue) * mix;
+    });
+
+    return interpolated.map((numericValue) => ({ value: numericValue }));
+  }, [series]);
+  const linePath = useMemo(
+    () => buildLinePath(points, 420, 188, 0, chartMaxValue),
+    [chartMaxValue, points]
+  );
+  const areaPath = useMemo(
+    () => buildAreaPath(points, 420, 188, 0, chartMaxValue),
+    [chartMaxValue, points]
+  );
 
   return (
     <article className="card operator-vehicle-trend-card">
-      <div className="operator-vehicle-panel-head operator-vehicle-trend-head">
-        <div>
-          <p className="operator-vehicle-section-label">운행 추이</p>
-          <h2>시간별 운행 차량 수</h2>
-        </div>
+      <div className="operator-vehicle-trend-header">
+        <p
+          className="operator-vehicle-section-label"
+          style={{
+            color: '#5a6c88',
+            fontSize: '14px',
+            fontWeight: 700,
+            letterSpacing: '0.03em',
+            lineHeight: 1.6,
+            margin: 0
+          }}
+        >
+          시간별 운행 차량
+        </p>
       </div>
-
       {linePath ? (
-        <div className="operator-vehicle-trend-chart-wrap">
-          <svg viewBox="0 0 420 190" className="operator-vehicle-trend-chart" preserveAspectRatio="none">
-            <defs>
-              <linearGradient id="operatorDrivingTrendFill" x1="0%" x2="0%" y1="0%" y2="100%">
-                <stop offset="0%" stopColor="rgba(63, 95, 134, 0.26)" />
-                <stop offset="100%" stopColor="rgba(238, 243, 251, 0.05)" />
-              </linearGradient>
-            </defs>
-            <path className="operator-vehicle-trend-area" d={areaPath} fill="url(#operatorDrivingTrendFill)" />
-            <path className="operator-vehicle-trend-line" d={linePath} />
-            {normalizedPoints.map((point, index) => {
-              if (!(index === 0 || index === normalizedPoints.length - 1 || index % 4 === 0)) {
-                return null;
-              }
-
-              const x = normalizedPoints.length === 1 ? 210 : (index / (normalizedPoints.length - 1)) * 420;
-              const y = 150 - ((point.value - minValue) / range) * 150;
-
-              return (
-                <circle
-                  key={`driving-point-${index}`}
-                  className="operator-vehicle-trend-dot"
-                  cx={x}
-                  cy={y}
-                  r="4"
-                />
-              );
-            })}
-          </svg>
-          <div className="operator-vehicle-trend-meta">
-            <strong>{formatCount(latestValue)}대</strong>
-            <span>최근 시점 운행 차량</span>
-          </div>
-          <div className="operator-vehicle-trend-axis">
-            {axisLabels.map((point, index) => (
-              <span key={`driving-axis-${index}`}>{point.label}</span>
+        <div className="user-chart-shell operator-vehicle-trend-shell">
+          <div className="user-chart-y-axis operator-vehicle-trend-y-axis-alt">
+            {yLabels.map((label, index) => (
+              <span key={`driving-y-${label}-${index}`}>{label}</span>
             ))}
+          </div>
+          <div className="user-chart-main">
+            <svg
+              viewBox="0 0 420 216"
+              className="user-line-chart user-line-chart-fuel-soft operator-vehicle-trend-svg"
+              preserveAspectRatio="none"
+            >
+              <defs>
+                <linearGradient id="operatorTrendFuelAreaFill" x1="0%" x2="0%" y1="0%" y2="100%">
+                  <stop offset="0%" stopColor="#57c2ff" stopOpacity="0.34" />
+                  <stop offset="58%" stopColor="#57c2ff" stopOpacity="0.18" />
+                  <stop offset="100%" stopColor="#151f3a" stopOpacity="0.02" />
+                </linearGradient>
+              </defs>
+              <path
+                className="operator-vehicle-trend-area"
+                d={areaPath}
+                style={{ fill: 'url(#operatorTrendFuelAreaFill)', stroke: 'none' }}
+              />
+              <path
+                className="operator-vehicle-trend-line"
+                d={linePath}
+                style={{ strokeWidth: 1.5 }}
+              />
+            </svg>
+            <div className="user-chart-x-axis">
+              {xLabels.map((label, index) => (
+                <span key={`driving-x-${index}`}>{label}</span>
+              ))}
+            </div>
           </div>
         </div>
       ) : (
-        <div className="operator-vehicle-trend-empty">최근 운행 차량 추이 데이터가 없습니다.</div>
+        <div className="user-chart-placeholder">No driving telemetry yet.</div>
       )}
-    </article>
-  );
-}
-
-function FuelSummaryCard({ fuelSummary }) {
-  return (
-    <article className="card operator-vehicle-fuel-card">
-      <div className="operator-vehicle-panel-head">
-        <div>
-          <p className="operator-vehicle-section-label">연료 상태 요약</p>
-          <h2>연료 상태 분포</h2>
-        </div>
-        <span
-          className="operator-vehicle-panel-badge operator-vehicle-panel-badge-compact"
-          data-count={`${formatCount(rows.length)}대`}
-        >
-          {formatCount(fuelSummary.totalTrackedVehicles)}대 기준
-        </span>
-      </div>
-
-      <div className="operator-vehicle-fuel-stack">
-        {fuelSummary.items.map((item) => (
-          <div key={item.key} className="operator-vehicle-fuel-row">
-            <div className="operator-vehicle-fuel-meta">
-              <span
-                className="operator-vehicle-legend-swatch"
-                style={{ backgroundColor: item.color }}
-                aria-hidden="true"
-              />
-              <strong>{item.label}</strong>
-            </div>
-            <div className="operator-vehicle-fuel-bar-track">
-              <div
-                className="operator-vehicle-fuel-bar-fill"
-                style={{
-                  width: `${item.ratio}%`,
-                  backgroundColor: item.color
-                }}
-              />
-            </div>
-            <div className="operator-vehicle-fuel-values">
-              <strong>{formatCount(item.value)}</strong>
-              <span>{item.ratio.toFixed(1)}%</span>
-            </div>
-          </div>
-        ))}
-      </div>
     </article>
   );
 }
@@ -357,11 +373,8 @@ function VehicleTable({ rows }) {
           <p className="operator-vehicle-section-label">운영 현황</p>
           <h2>전체 차량 목록</h2>
         </div>
-        <span
-          className="operator-vehicle-panel-badge operator-vehicle-panel-badge-compact"
-          data-count={`${formatCount(rows.length)}대`}
-        >
-          {formatCount(rows.length)}대 표시
+        <span className="operator-vehicle-panel-badge operator-vehicle-panel-badge-compact">
+          {formatCount(rows.length)}대
         </span>
       </div>
 
@@ -373,7 +386,7 @@ function VehicleTable({ rows }) {
               <th>상태</th>
               <th>속도</th>
               <th>연료</th>
-              <th>최근 수신</th>
+              <th>최종 수신</th>
               <th>위치</th>
             </tr>
           </thead>
@@ -383,11 +396,8 @@ function VehicleTable({ rows }) {
                 <tr key={row.vehicleId}>
                   <td>{row.vehicleId}</td>
                   <td>
-                    <span
-                      className={`operator-vehicle-status-badge is-${row.status}`}
-                      style={{ '--badge-color': row.statusColor }}
-                    >
-                      {row.statusLabel}
+                    <span className={`operator-vehicle-status-badge is-${row.status}`}>
+                      {getStatusDisplayLabel(row.status, row.statusLabel)}
                     </span>
                   </td>
                   <td>{formatSpeed(row.speed)}</td>
@@ -410,96 +420,6 @@ function VehicleTable({ rows }) {
   );
 }
 
-function DelayedVehiclesTable({ rows, delayedSeconds }) {
-  return (
-    <article className="card operator-vehicle-side-card">
-      <div className="operator-vehicle-panel-head">
-        <div>
-          <p className="operator-vehicle-section-label">갱신 지연</p>
-          <h2>업데이트 지연 차량</h2>
-        </div>
-        <span className="operator-vehicle-panel-badge">{delayedSeconds}s 이상</span>
-      </div>
-
-      <div className="table-wrap operator-vehicle-side-table-wrap">
-        <table className="operator-vehicle-side-table">
-          <thead>
-            <tr>
-              <th>차량 ID</th>
-              <th>상태</th>
-              <th>지연</th>
-              <th>최근 수신</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.length ? (
-              rows.map((row) => (
-                <tr key={`${row.vehicleId}-${row.delaySeconds}`}>
-                  <td>{row.vehicleId}</td>
-                  <td>{row.statusLabel}</td>
-                  <td>{row.delayLabel}</td>
-                  <td>{row.lastUpdatedAt}</td>
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan="4" className="operator-vehicle-empty-cell">
-                  현재 지연 상태 차량이 없습니다.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-    </article>
-  );
-}
-
-function IdleVehiclesTable({ rows, idleSeconds }) {
-  return (
-    <article className="card operator-vehicle-side-card">
-      <div className="operator-vehicle-panel-head">
-        <div>
-          <p className="operator-vehicle-section-label">운영 체크</p>
-          <h2>공회전 의심 차량</h2>
-        </div>
-        <span className="operator-vehicle-panel-badge">{idleSeconds}s 이상</span>
-      </div>
-
-      <div className="table-wrap operator-vehicle-side-table-wrap">
-        <table className="operator-vehicle-side-table">
-          <thead>
-            <tr>
-              <th>차량 ID</th>
-              <th>공회전 시간</th>
-              <th>연료</th>
-              <th>최근 수신</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.length ? (
-              rows.map((row) => (
-                <tr key={`${row.vehicleId}-${row.idleSeconds}`}>
-                  <td>{row.vehicleId}</td>
-                  <td>{row.idleMinutes.toFixed(1)}분</td>
-                  <td>{formatFuelLevel(row.fuelLevel)}</td>
-                  <td>{row.lastUpdatedAt}</td>
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan="4" className="operator-vehicle-empty-cell">
-                  현재 공회전 의심 차량이 없습니다.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-    </article>
-  );
-}
-
 function OperatorVehiclePage() {
   const [dashboard, setDashboard] = useState(INITIAL_DASHBOARD);
   const [errorMessage, setErrorMessage] = useState('');
@@ -510,9 +430,9 @@ function OperatorVehiclePage() {
   const chartItems = dashboard.statusBreakdown.items.filter(
     (item) => item.key !== 'offline' && item.key !== 'no_data'
   );
-  const orderedKpiItems = KPI_DISPLAY_ORDER.map((key) =>
-    KPI_ITEMS.find((item) => item.key === key)
-  ).filter(Boolean);
+
+  const orderedKpiKeys = KPI_DISPLAY_ORDER.filter((key) => key in dashboard.summary);
+
   const filteredVehicleRows = dashboard.vehicleTable.filter((row) => {
     const matchesSearch = String(row.vehicleId || '')
       .toLowerCase()
@@ -547,13 +467,8 @@ function OperatorVehiclePage() {
               ? result.statusBreakdown.items
               : INITIAL_DASHBOARD.statusBreakdown.items
           },
-          fuelSummary: {
-            ...INITIAL_DASHBOARD.fuelSummary,
-            ...result.fuelSummary,
-            items: result.fuelSummary?.items?.length
-              ? result.fuelSummary.items
-              : INITIAL_DASHBOARD.fuelSummary.items
-          }
+          vehicleTable: result.vehicleTable?.length ? result.vehicleTable : INITIAL_DASHBOARD.vehicleTable,
+          drivingTrend: result.drivingTrend?.length ? result.drivingTrend : INITIAL_DASHBOARD.drivingTrend
         });
         setErrorMessage('');
       } catch (error) {
@@ -600,19 +515,22 @@ function OperatorVehiclePage() {
               value={statusFilter}
               onChange={(event) => setStatusFilter(event.target.value)}
             >
-              <option value="all">전체</option>
-              <option value="driving">운행 중</option>
-              <option value="stopped">정차</option>
-              <option value="engine_off">시동 꺼짐</option>
+              {STATUS_FILTER_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
             </select>
           </label>
           <div className="operator-vehicle-toolbar-meta">
-            최근 갱신 시간 {dashboard.generatedAt}
+            데이터 수신 시각 {dashboard.generatedAt}
           </div>
         </div>
       }
       tabs={operatorTabs}
     >
+      {errorMessage ? <div className="auth-message error">{errorMessage}</div> : null}
+
       {isLoading ? (
         <article className="card operator-vehicle-loading-card">
           차량 운영 현황 데이터를 불러오는 중입니다...
@@ -624,13 +542,11 @@ function OperatorVehiclePage() {
           <section className="operator-vehicle-top-grid">
             <div className="operator-vehicle-kpi-column">
               <div className="operator-vehicle-kpi-grid">
-                {orderedKpiItems.map((item) => (
-                  <article key={item.key} className="card operator-vehicle-kpi-card">
-                    <p className="operator-vehicle-kpi-label">
-                      {KPI_LABELS[item.key] || item.label}
-                    </p>
+                {orderedKpiKeys.map((key) => (
+                  <article key={key} className="card operator-vehicle-kpi-card">
+                    <p className="operator-vehicle-kpi-label">{KPI_LABELS[key]}</p>
                     <strong className="operator-vehicle-kpi-value">
-                      {formatCount(dashboard.summary[item.key])}
+                      {formatCount(dashboard.summary[key])}
                     </strong>
                   </article>
                 ))}
@@ -642,129 +558,16 @@ function OperatorVehiclePage() {
             </div>
 
             <div className="operator-vehicle-chart-column">
-              <VehicleStatusDonut
-                totalVehicles={dashboard.summary.totalVehicles}
-                items={chartItems}
+              <VehicleStatusDonut items={chartItems} />
+              <DrivingTrendCard
+                series={dashboard.drivingTrend}
+                maxValue={dashboard.summary.totalVehicles}
               />
-              <DrivingTrendCard points={dashboard.drivingTrend} />
             </div>
           </section>
-
         </div>
       ) : null}
     </DashboardLayout>
-  );
-}
-
-function buildTrendLinePath(points, width, height) {
-  if (!points.length) {
-    return '';
-  }
-
-  const values = points.map((point) => point.value);
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  const range = max - min || 1;
-
-  return points
-    .map((point, index) => {
-      const x = points.length === 1 ? width / 2 : (index / (points.length - 1)) * width;
-      const y = height - ((point.value - min) / range) * height;
-      return `${index === 0 ? 'M' : 'L'} ${x.toFixed(1)} ${y.toFixed(1)}`;
-    })
-    .join(' ');
-}
-
-function buildTrendAreaPath(points, width, height) {
-  if (!points.length) {
-    return '';
-  }
-
-  return `${buildTrendLinePath(points, width, height)} L ${width} ${height} L 0 ${height} Z`;
-}
-
-function DrivingTrendCard({ points }) {
-  const normalizedPoints = useMemo(
-    () => points.map((point) => ({ value: Number(point.value || 0), label: point.label || '--:--' })),
-    [points]
-  );
-  const linePath = useMemo(() => buildTrendLinePath(normalizedPoints, 420, 150), [normalizedPoints]);
-  const areaPath = useMemo(() => buildTrendAreaPath(normalizedPoints, 420, 150), [normalizedPoints]);
-  const latestValue = normalizedPoints.length ? normalizedPoints[normalizedPoints.length - 1].value : 0;
-  const axisLabels = useMemo(() => {
-    if (!normalizedPoints.length) {
-      return [];
-    }
-
-    return normalizedPoints.filter((_, index) => (
-      index === 0 ||
-      index === normalizedPoints.length - 1 ||
-      index === Math.floor((normalizedPoints.length - 1) / 2)
-    ));
-  }, [normalizedPoints]);
-
-  const values = normalizedPoints.map((point) => point.value);
-  const minValue = values.length ? Math.min(...values) : 0;
-  const maxValue = values.length ? Math.max(...values) : 0;
-  const range = maxValue - minValue || 1;
-
-  return (
-    <article className="card operator-vehicle-trend-card">
-      <div className="operator-vehicle-panel-head operator-vehicle-trend-head">
-        <div>
-          <p className="operator-vehicle-section-label">{'운행 추이'}</p>
-          <h2>{'시간별 운행 차량 수'}</h2>
-        </div>
-      </div>
-
-      {linePath ? (
-        <div className="operator-vehicle-trend-chart-wrap">
-          <svg viewBox="0 0 420 190" className="operator-vehicle-trend-chart" preserveAspectRatio="none">
-            <defs>
-              <linearGradient id="operatorDrivingTrendFillSafe" x1="0%" x2="0%" y1="0%" y2="100%">
-                <stop offset="0%" stopColor="rgba(63, 95, 134, 0.26)" />
-                <stop offset="100%" stopColor="rgba(238, 243, 251, 0.05)" />
-              </linearGradient>
-            </defs>
-            <path
-              className="operator-vehicle-trend-area"
-              d={areaPath}
-              fill="url(#operatorDrivingTrendFillSafe)"
-            />
-            <path className="operator-vehicle-trend-line" d={linePath} />
-            {normalizedPoints.map((point, index) => {
-              if (!(index === 0 || index === normalizedPoints.length - 1 || index % 4 === 0)) {
-                return null;
-              }
-
-              const x = normalizedPoints.length === 1 ? 210 : (index / (normalizedPoints.length - 1)) * 420;
-              const y = 150 - ((point.value - minValue) / range) * 150;
-
-              return (
-                <circle
-                  key={`driving-point-safe-${index}`}
-                  className="operator-vehicle-trend-dot"
-                  cx={x}
-                  cy={y}
-                  r="4"
-                />
-              );
-            })}
-          </svg>
-          <div className="operator-vehicle-trend-meta">
-            <strong>{`${formatCount(latestValue)}대`}</strong>
-            <span>{'최근 시점 운행 차량'}</span>
-          </div>
-          <div className="operator-vehicle-trend-axis">
-            {axisLabels.map((point, index) => (
-              <span key={`driving-axis-safe-${index}`}>{point.label}</span>
-            ))}
-          </div>
-        </div>
-      ) : (
-        <div className="operator-vehicle-trend-empty">{'최근 운행 차량 추이 데이터가 없습니다.'}</div>
-      )}
-    </article>
   );
 }
 

@@ -121,6 +121,38 @@ function formatTimeLabel(timestamp) {
   return `${hours}:${minutes}`;
 }
 
+function formatEventTypeLabel(value) {
+  const numericValue = Number(value);
+
+  if (numericValue === 1) {
+    return 'TEL';
+  }
+
+  if (numericValue === 2) {
+    return 'HB';
+  }
+
+  return value ?? '-';
+}
+
+function formatModeLabel(value) {
+  const numericValue = Number(value);
+
+  if (numericValue === 1) {
+    return 'D';
+  }
+
+  if (numericValue === 2) {
+    return 'S';
+  }
+
+  if (numericValue === 3) {
+    return 'OFF';
+  }
+
+  return value ?? '-';
+}
+
 function buildTimeAxisLabels(series, count = 4) {
   if (!series.length) {
     return [];
@@ -212,9 +244,12 @@ function buildMapEmbedUrl(lat, lon) {
   return `https://maps.google.com/maps?q=${latitude.toFixed(6)},${longitude.toFixed(6)}&z=15&output=embed`;
 }
 
-function MetricTile({ label, value, accent = 'blue', className = '' }) {
+function MetricTile({ label, value, accent = 'blue', className = '', icon = '•' }) {
   return (
-    <article className={`user-metric-tile accent-${accent} ${className}`.trim()}>
+    <article
+      className={`user-metric-tile accent-${accent} ${className}`.trim()}
+      data-icon={icon}
+    >
       <span>{label}</span>
       <strong>{value}</strong>
     </article>
@@ -226,17 +261,95 @@ function GaugeCard({ title, value, unit, min = 0, max = 100, thresholds = [], di
   const clampedValue = Math.min(Math.max(numericValue, min), max);
   const ratio = (clampedValue - min) / Math.max(max - min, 1);
   const circumference = 282.743;
+  const outlineCircumference = 314.159;
   const progress = circumference * ratio;
+  const defaultProgressColor = '#5e65f9';
+  const segmentedProgressColor =
+    title === '연료 잔량'
+      ? ratio < 1 / 3
+        ? '#fc822a'
+        : ratio < 2 / 3
+          ? '#ec62db'
+          : '#5a63ef'
+      : title === '속도'
+        ? ratio < 1 / 3
+          ? '#5a63ef'
+          : ratio < 2 / 3
+            ? '#ec62db'
+            : '#fc822a'
+        : defaultProgressColor;
+  const outerThresholds = title === '연료 잔량'
+    ? []
+    : [
+        { offset: 0, span: thresholds[0]?.offset || 1, color: '#6bcf63' },
+        ...thresholds
+      ].filter((threshold) => threshold.span > 0);
 
   return (
     <article className="card user-gauge-card">
       <h3>{title}</h3>
       <div className="user-gauge-wrap">
-        <svg viewBox="0 0 220 140" className="user-gauge-chart" aria-hidden="true">
-          <path
-            className="user-gauge-track"
-            d="M 20 120 A 90 90 0 0 1 200 120"
-          />
+          <svg viewBox="0 0 220 140" className="user-gauge-chart" aria-hidden="true">
+            {title === '연료 잔량' ? (
+              <>
+                <path
+                  className="user-gauge-outline-band"
+                  d="M 10 120 A 100 100 0 0 1 60 33.4"
+                  style={{ stroke: '#fc822a' }}
+                />
+                <path
+                  className="user-gauge-outline-band"
+                  d="M 60 33.4 A 100 100 0 0 1 160 33.4"
+                  style={{ stroke: '#ec62db' }}
+                />
+                <path
+                  className="user-gauge-outline-band"
+                  d="M 160 33.4 A 100 100 0 0 1 210 120"
+                  style={{ stroke: '#5a63ef' }}
+                />
+              </>
+            ) : title === '속도' ? (
+              <>
+                <path
+                  className="user-gauge-outline-band"
+                  d="M 10 120 A 100 100 0 0 1 60 33.4"
+                  style={{ stroke: '#5a63ef' }}
+                />
+                <path
+                  className="user-gauge-outline-band"
+                  d="M 60 33.4 A 100 100 0 0 1 160 33.4"
+                  style={{ stroke: '#ec62db' }}
+                />
+                <path
+                  className="user-gauge-outline-band"
+                  d="M 160 33.4 A 100 100 0 0 1 210 120"
+                  style={{ stroke: '#fc822a' }}
+                />
+              </>
+            ) : (
+              <>
+                <path
+                  className="user-gauge-outline-track"
+                  d="M 10 120 A 100 100 0 0 1 210 120"
+                />
+                {outerThresholds.map((threshold) => (
+                  <path
+                    key={`outline-${title}-${threshold.offset}-${threshold.color}`}
+                    className="user-gauge-outline-band"
+                    d="M 10 120 A 100 100 0 0 1 210 120"
+                    style={{
+                      stroke: threshold.color,
+                      strokeDasharray: `${outlineCircumference * threshold.span} ${outlineCircumference}`,
+                      strokeDashoffset: outlineCircumference * (1 - threshold.offset)
+                    }}
+                  />
+                ))}
+              </>
+            )}
+            <path
+              className="user-gauge-track"
+              d="M 20 120 A 90 90 0 0 1 200 120"
+            />
           {thresholds.map((threshold) => (
             <path
               key={`${title}-${threshold.offset}-${threshold.color}`}
@@ -252,7 +365,10 @@ function GaugeCard({ title, value, unit, min = 0, max = 100, thresholds = [], di
           <path
             className="user-gauge-progress"
             d="M 20 120 A 90 90 0 0 1 200 120"
-            style={{ strokeDasharray: `${progress} ${circumference}` }}
+            style={{
+              stroke: segmentedProgressColor,
+              strokeDasharray: `${progress} ${circumference}`
+            }}
           />
         </svg>
         <div className="user-gauge-value">
@@ -269,9 +385,27 @@ function EngineStatusCard({ isOn }) {
     <article className={`card user-gauge-card user-engine-card ${isOn ? 'is-on' : 'is-off'}`}>
       <p className="user-vehicle-eyebrow">엔진 상태</p>
       <div className="user-engine-visual">
-        <div className="user-engine-button" aria-hidden="true">
-          <span className="user-engine-button-line" />
-          <span className="user-engine-button-ring" />
+        <div className="user-engine-icon-tile" aria-hidden="true">
+          <div className="user-engine-icon-grid" />
+          <div className="user-engine-icon-shell">
+            <svg viewBox="0 0 64 64" className="user-engine-icon-glyph">
+              <path
+                d="M32 12v15"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="4.8"
+                strokeLinecap="round"
+              />
+              <path
+                d="M22 19.5a16 16 0 1 0 20 0"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="4.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </div>
         </div>
       </div>
       <strong>{isOn ? 'ON' : 'OFF'}</strong>
@@ -291,7 +425,7 @@ function SpeedTrendCard({ title, value, series }) {
     }
 
     const source = series.slice(-60).map((item) => Number(item.value || 0));
-    const targetCount = 66;
+    const targetCount = 28;
     const interpolated = Array.from({ length: targetCount }, (_, index) => {
       const position = (index / Math.max(targetCount - 1, 1)) * Math.max(source.length - 1, 0);
       const leftIndex = Math.floor(position);
@@ -421,15 +555,14 @@ function FuelTrendCard({ title, value, series }) {
             <svg viewBox="0 0 420 216" className="user-line-chart user-line-chart-fuel user-line-chart-fuel-soft" preserveAspectRatio="none">
               <defs>
                 <linearGradient id="fuelAreaFill" x1="0%" x2="0%" y1="0%" y2="100%">
-                  <stop offset="0%" stopColor="rgba(95, 126, 171, 0.32)" />
-                  <stop offset="100%" stopColor="#f3f7fe" />
+                  <stop offset="0%" stopColor="rgba(230, 84, 211, 0.26)" />
+                  <stop offset="38%" stopColor="rgba(230, 84, 211, 0.16)" />
+                  <stop offset="72%" stopColor="rgba(230, 84, 211, 0.06)" />
+                  <stop offset="100%" stopColor="rgba(243, 247, 254, 0.02)" />
                 </linearGradient>
               </defs>
               <path className="user-fuel-area" d={areaPath} fill="url(#fuelAreaFill)" stroke="none" />
-              <path className="user-fuel-line" d={linePath} />
-              {highlightPoints.map((point) => (
-                <circle key={point.key} className="user-fuel-dot" cx={point.x} cy={point.y} r="4.5" />
-              ))}
+              <path className="user-fuel-line" d={linePath} style={{ strokeWidth: 1.5 }} />
             </svg>
             <div className="user-chart-x-axis">
               {xLabels.map((label, index) => (
@@ -645,16 +778,19 @@ function UserDashboardPage() {
             value={formatDateTime(dashboard?.latest?.timestamp)}
             accent="slate"
             className="updated-tile"
+            icon="↻"
           />
           <MetricTile
             label="평균 속도"
             value={formatMetric(metrics?.averageSpeed, ' km/h', 1)}
             accent="blue"
+            icon="↗"
           />
           <MetricTile
             label="주행 거리"
             value={formatMetric(metrics?.distanceKm, ' km', 2)}
             accent="indigo"
+            icon="⌁"
           />
         </div>
 
@@ -678,7 +814,7 @@ function UserDashboardPage() {
           <article className="card user-records-card">
             <div className="user-analytics-head">
               <h3>최근 차량 데이터</h3>
-              <strong>{formatMetric(metrics?.sampleCount, '')}</strong>
+              <strong>{`${formatMetric(metrics?.sampleCount, '')}개`}</strong>
             </div>
             <div className="table-wrap">
               <table>
@@ -700,8 +836,8 @@ function UserDashboardPage() {
                         <td>{formatMetric(record.speed, ' km/h')}</td>
                         <td>{formatMetric(record.fuelLevel, '%', 1)}</td>
                         <td>{record.engineOn ? 'ON' : 'OFF'}</td>
-                        <td>{record.eventType ?? '-'}</td>
-                        <td>{record.mode ?? '-'}</td>
+                        <td>{formatEventTypeLabel(record.eventType)}</td>
+                        <td>{formatModeLabel(record.mode)}</td>
                       </tr>
                     ))
                   ) : (

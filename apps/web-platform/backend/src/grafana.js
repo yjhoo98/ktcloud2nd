@@ -2,6 +2,25 @@ function trimTrailingSlash(value = '') {
   return value.replace(/\/+$/, '');
 }
 
+function withGrafanaTheme(value = '', theme = 'dark') {
+  if (!value) {
+    return '';
+  }
+
+  try {
+    const url = new URL(value);
+
+    if (!url.searchParams.has('theme')) {
+      url.searchParams.set('theme', theme);
+    }
+
+    return url.toString();
+  } catch {
+    const separator = value.includes('?') ? '&' : '?';
+    return value.includes('theme=') ? value : `${value}${separator}theme=${theme}`;
+  }
+}
+
 function normalizeGrafanaUrl(value = '', operatorHost = '', scheme = 'http') {
   if (!value) {
     return '';
@@ -36,7 +55,7 @@ export function getGrafanaConfig() {
   return {
     enabled,
     baseUrl,
-    embedUrl,
+    embedUrl: withGrafanaTheme(embedUrl, 'dark'),
     provider,
     allowEmbed
   };

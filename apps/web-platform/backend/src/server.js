@@ -563,8 +563,9 @@ if (isEnabledForTarget('operator')) {
       const dashboard = await loadOperatorVehicleDashboard();
       response.json(dashboard);
     } catch (error) {
+      console.error('Failed to load operator vehicle dashboard', error);
       response.status(500).json({
-        message: 'Failed to load the operator vehicle dashboard.',
+        message: `Failed to load the operator vehicle dashboard. ${error.message}`,
         details: error.message
       });
     }

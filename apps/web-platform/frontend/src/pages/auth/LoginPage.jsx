@@ -122,29 +122,29 @@ function LoginPage({ allowedRole = null }) {
     <div className="page login-page">
       <div className="login-card auth-card">
         <div className="auth-switch">
-          <button
-            type="button"
-            className={`auth-switch-button${mode === 'login' ? ' active' : ''}`}
+            <button
+              type="button"
+              className={`auth-switch-button${mode === 'login' ? ' active' : ''}`}
+              onClick={() => {
+                resetMessages();
+                setMode('login');
+              }}
+            >
+              로그인
+            </button>
+            <button
+              type="button"
+              className={`auth-switch-button${mode === 'signup' ? ' active' : ''}`}
             onClick={() => {
-              resetMessages();
-              setMode('login');
-            }}
-          >
-            Login
-          </button>
-          <button
-            type="button"
-            className={`auth-switch-button${mode === 'signup' ? ' active' : ''}`}
-            onClick={() => {
-              resetMessages();
-              setMode('signup');
-            }}
-          >
-            Sign Up
-          </button>
-        </div>
+                resetMessages();
+                setMode('signup');
+              }}
+            >
+              회원가입
+            </button>
+          </div>
 
-        <h1>{mode === 'login' ? `${portalName} Login` : `${portalName} Sign Up`}</h1>
+          <h1>{mode === 'login' ? `${portalName} Login` : `${portalName} Sign Up`}</h1>
         {errorMessage ? <div className="auth-message error">{errorMessage}</div> : null}
         {successMessage ? (
           <div className="auth-message success">{successMessage}</div>
@@ -175,7 +175,7 @@ function LoginPage({ allowedRole = null }) {
             </label>
 
             <button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? 'Signing in...' : 'Login'}
+              {isSubmitting ? '로그인 중...' : '로그인'}
             </button>
           </form>
         ) : (
@@ -239,9 +239,9 @@ function LoginPage({ allowedRole = null }) {
               </select>
             </label>
 
-            <button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? 'Creating account...' : 'Sign Up'}
-            </button>
+              <button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? '계정 생성 중...' : '회원가입'}
+              </button>
           </form>
         )}
       </div>

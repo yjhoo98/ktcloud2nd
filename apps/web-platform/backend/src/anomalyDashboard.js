@@ -1,4 +1,4 @@
-import { query } from './db.js';
+﻿import { query } from './db.js';
 
 const ANOMALY_TYPES = [
   {
@@ -50,6 +50,9 @@ const EMPTY_SUMMARY = {
   missingDataCount: 0
 };
 
+const HEATMAP_BUCKET_SECONDS = 10 * 60;
+const HEATMAP_BUCKET_COUNT = 12;
+
 function formatDateTime(epochSeconds) {
   if (!epochSeconds) {
     return '-';
@@ -67,6 +70,19 @@ function formatDateTime(epochSeconds) {
   })
     .format(new Date(Number(epochSeconds) * 1000))
     .replace(',', '');
+}
+
+function formatBucketLabel(epochSeconds) {
+  if (!epochSeconds) {
+    return '-';
+  }
+
+  return new Intl.DateTimeFormat('sv-SE', {
+    timeZone: 'Asia/Seoul',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  }).format(new Date(Number(epochSeconds) * 1000));
 }
 
 function formatSummary(row) {
@@ -108,6 +124,73 @@ function buildBreakdown(summary) {
   };
 }
 
+function buildHeatmap(rows) {
+  const nowSeconds = Math.floor(Date.now() / 1000);
+  const latestBucketStart =
+    Math.floor(nowSeconds / HEATMAP_BUCKET_SECONDS) * HEATMAP_BUCKET_SECONDS;
+  const firstBucketStart =
+    latestBucketStart - (HEATMAP_BUCKET_COUNT - 1) * HEATMAP_BUCKET_SECONDS;
+
+  const columns = Array.from({ length: HEATMAP_BUCKET_COUNT }, (_, index) => {
+    const bucketStart = firstBucketStart + index * HEATMAP_BUCKET_SECONDS;
+
+    return {
+      bucketStart,
+      label: formatBucketLabel(bucketStart)
+    };
+  });
+
+  const lookup = new Map();
+
+  rows.forEach((row) => {
+    const occurredAt = Number(row.occurredAt || 0);
+    const anomalyType = row.anomalyType;
+
+    if (!occurredAt || !anomalyType || occurredAt < firstBucketStart) {
+      return;
+    }
+
+    const bucketStart =
+      Math.floor(occurredAt / HEATMAP_BUCKET_SECONDS) * HEATMAP_BUCKET_SECONDS;
+
+    if (bucketStart < firstBucketStart || bucketStart > latestBucketStart) {
+      return;
+    }
+
+    const key = `${anomalyType}:${bucketStart}`;
+    lookup.set(key, (lookup.get(key) || 0) + 1);
+  });
+
+  const values = [];
+  const items = ANOMALY_TYPES.map((anomalyType) => {
+    const cells = columns.map((column) => {
+      const value = lookup.get(`${anomalyType.key}:${column.bucketStart}`) || 0;
+      values.push(value);
+
+      return {
+        bucketStart: column.bucketStart,
+        label: column.label,
+        value
+      };
+    });
+
+    return {
+      key: anomalyType.key,
+      label: anomalyType.label,
+      color: anomalyType.color,
+      cells
+    };
+  });
+
+  const maxValue = values.length ? Math.max(...values) : 0;
+
+  return {
+    columns,
+    maxValue,
+    items
+  };
+}
+
 function formatAlertRecord(row) {
   if (!row) {
     return null;
@@ -128,7 +211,10 @@ function formatAlertRecord(row) {
 }
 
 export async function loadAnomalyDashboard() {
-  const [summaryResult, latestAlertResult, recentAlertsResult] = await Promise.all([
+  const heatmapSince =
+    Math.floor(Date.now() / 1000) - (HEATMAP_BUCKET_COUNT - 1) * HEATMAP_BUCKET_SECONDS;
+
+  const [summaryResult, latestAlertResult, recentAlertsResult, heatmapResult] = await Promise.all([
     query(`
       SELECT
         COUNT(*)::int AS "totalAlerts",
@@ -170,7 +256,18 @@ export async function loadAnomalyDashboard() {
       FROM vehicle_anomaly_alerts
       ORDER BY occurred_at DESC NULLS LAST, id DESC
       LIMIT 5
-    `)
+    `),
+    query(
+      `
+      SELECT
+        anomaly_type AS "anomalyType",
+        occurred_at AS "occurredAt"
+      FROM vehicle_anomaly_alerts
+      WHERE occurred_at >= $1
+      ORDER BY occurred_at ASC
+      `,
+      [heatmapSince]
+    )
   ]);
 
   const summary = formatSummary(summaryResult.rows[0]);
@@ -179,6 +276,7 @@ export async function loadAnomalyDashboard() {
     generatedAt: formatDateTime(Math.floor(Date.now() / 1000)),
     summary,
     breakdown: buildBreakdown(summary),
+    heatmap: buildHeatmap(heatmapResult.rows),
     latestAlert: formatAlertRecord(latestAlertResult.rows[0] || null),
     recentAlerts: recentAlertsResult.rows.map((row) => formatAlertRecord(row)).filter(Boolean)
   };

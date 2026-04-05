@@ -1,4 +1,4 @@
-import { useLocation, useNavigate } from 'react-router-dom';
+﻿import { useLocation, useNavigate } from 'react-router-dom';
 import { appTarget, getLoginUrl, isExternalUrl } from '../config/appTarget';
 import { clearStoredSession, getStoredSession } from '../utils/authStorage';
 
@@ -18,6 +18,10 @@ function DashboardLayout({
   const brandTitle = appTarget === 'operator' ? 'Vehicle Admin Portal' : 'Vehicle Portal';
 
   const resolvedRole = role || session?.role?.toUpperCase() || 'USER';
+  const roleLabelMap = {
+    USER: 'USER',
+    OPERATOR: 'OPERATOR'
+  };
   const resolvedUserId =
     userId ||
     session?.user?.userName ||
@@ -51,7 +55,7 @@ function DashboardLayout({
         <div className="topbar-left">
           <div className="brand-block">
             <span className="brand-title">{brandTitle}</span>
-            <span className="brand-role">{resolvedRole}</span>
+            <span className="brand-role">{roleLabelMap[resolvedRole] || resolvedRole}</span>
           </div>
 
           {tabs.length > 0 ? (
@@ -77,7 +81,7 @@ function DashboardLayout({
         <div className="topbar-right">
           <span className="user-chip">{resolvedUserId}</span>
           <button type="button" className="logout-button" onClick={handleLogout}>
-            Logout
+            로그아웃
           </button>
         </div>
       </header>
@@ -97,3 +101,4 @@ function DashboardLayout({
 }
 
 export default DashboardLayout;
+

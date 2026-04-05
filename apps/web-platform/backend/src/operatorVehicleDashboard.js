@@ -1,12 +1,9 @@
-import { query } from './db.js';
+﻿import { query } from './db.js';
 
 const REFRESH_INTERVAL_SECONDS = 5;
-const DELAY_WARNING_SECONDS = 15;
 const OFFLINE_THRESHOLD_SECONDS = 60;
-const IDLE_WARNING_SECONDS = 60;
-const DRIVING_TREND_BUCKET_SECONDS = 300;
+const DRIVING_TREND_BUCKET_SECONDS = 10;
 const DRIVING_TREND_POINTS = 12;
-
 const STATUS_META = {
   driving: {
     key: 'driving',
@@ -15,7 +12,7 @@ const STATUS_META = {
   },
   engine_off: {
     key: 'engine_off',
-    label: '시동 꺼짐',
+    label: '시동 OFF',
     color: '#8fd2ee'
   },
   stopped: {
@@ -34,13 +31,6 @@ const STATUS_META = {
     color: '#c9d3e3'
   }
 };
-
-const FUEL_BUCKETS = [
-  { key: 'ample', label: '여유', color: '#8fd2ee', min: 60, max: Number.POSITIVE_INFINITY },
-  { key: 'normal', label: '보통', color: '#7fb069', min: 30, max: 60 },
-  { key: 'low', label: '주의', color: '#f3c15d', min: 10, max: 30 },
-  { key: 'critical', label: '위험', color: '#e06b5f', min: Number.NEGATIVE_INFINITY, max: 10 }
-];
 
 function formatDateTime(epochSeconds) {
   if (!epochSeconds) {
@@ -63,13 +53,14 @@ function formatDateTime(epochSeconds) {
 
 function formatTimeLabel(epochSeconds) {
   if (!epochSeconds) {
-    return '--:--';
+    return '-';
   }
 
-  return new Intl.DateTimeFormat('ko-KR', {
+  return new Intl.DateTimeFormat('en-GB', {
     timeZone: 'Asia/Seoul',
     hour: '2-digit',
     minute: '2-digit',
+    second: '2-digit',
     hour12: false
   }).format(new Date(Number(epochSeconds) * 1000));
 }
@@ -111,6 +102,75 @@ function formatLocationLabel(lat, lon) {
   }
 
   return `${formatCoordinate(latValue)}, ${formatCoordinate(lonValue)}`;
+}
+
+function resolveShortLocationLabel(lat, lon) {
+  const fallbackLabel = formatLocationLabel(lat, lon);
+
+  if (lat === null || lat === undefined || lon === null || lon === undefined) {
+    return fallbackLabel;
+  }
+
+  const latValue = Number(lat);
+  const lonValue = Number(lon);
+
+  if (!Number.isFinite(latValue) || !Number.isFinite(lonValue)) {
+    return fallbackLabel;
+  }
+
+  if (latValue < 37.44) {
+    if (lonValue < 126.86) return '경기도 김포시 고촌읍';
+    if (lonValue < 126.92) return '서울특별시 구로구 오류동';
+    if (lonValue < 126.98) return '서울특별시 금천구 가산동';
+    if (lonValue < 127.06) return '서울특별시 서초구 양재동';
+    if (lonValue < 127.12) return '서울특별시 송파구 문정동';
+    return '경기도 성남시 수정구 복정동';
+  }
+
+  if (latValue < 37.49) {
+    if (lonValue < 126.82) return '서울특별시 강서구 마곡동';
+    if (lonValue < 126.88) return '서울특별시 양천구 목동';
+    if (lonValue < 126.94) return '서울특별시 영등포구 여의도동';
+    if (lonValue < 127.0) return '서울특별시 동작구 사당동';
+    if (lonValue < 127.06) return '서울특별시 강남구 역삼동';
+    if (lonValue < 127.12) return '서울특별시 송파구 잠실동';
+    return '경기도 성남시 분당구 서현동';
+  }
+
+  if (latValue < 37.54) {
+    if (lonValue < 126.84) return '서울특별시 강서구 화곡동';
+    if (lonValue < 126.9) return '서울특별시 영등포구 당산동';
+    if (lonValue < 126.96) return '서울특별시 용산구 한강로동';
+    if (lonValue < 127.02) return '서울특별시 서초구 서초동';
+    if (lonValue < 127.08) return '서울특별시 강남구 삼성동';
+    if (lonValue < 127.14) return '서울특별시 송파구 방이동';
+    return '경기도 하남시 감일동';
+  }
+
+  if (latValue < 37.59) {
+    if (lonValue < 126.86) return '서울특별시 마포구 합정동';
+    if (lonValue < 126.92) return '서울특별시 서대문구 연희동';
+    if (lonValue < 126.98) return '서울특별시 중구 을지로동';
+    if (lonValue < 127.04) return '서울특별시 성동구 성수동';
+    if (lonValue < 127.1) return '서울특별시 광진구 자양동';
+    return '서울특별시 강동구 천호동';
+  }
+
+  if (latValue < 37.64) {
+    if (lonValue < 126.88) return '서울특별시 은평구 불광동';
+    if (lonValue < 126.94) return '서울특별시 서대문구 홍제동';
+    if (lonValue < 127.0) return '서울특별시 종로구 혜화동';
+    if (lonValue < 127.06) return '서울특별시 성북구 길음동';
+    if (lonValue < 127.12) return '서울특별시 중랑구 면목동';
+    return '경기도 구리시 인창동';
+  }
+
+  if (lonValue < 126.9) return '경기도 고양시 덕양구 행신동';
+  if (lonValue < 126.96) return '서울특별시 은평구 진관동';
+  if (lonValue < 127.02) return '서울특별시 강북구 수유동';
+  if (lonValue < 127.08) return '서울특별시 노원구 상계동';
+  if (lonValue < 127.14) return '서울특별시 도봉구 창동';
+  return '경기도 남양주시 별내동';
 }
 
 function compareVehicleIds(left, right) {
@@ -167,46 +227,6 @@ function resolveVehicleStatus(row, nowSeconds) {
   };
 }
 
-function buildFuelSummary(rows) {
-  const counts = new Map(FUEL_BUCKETS.map((bucket) => [bucket.key, 0]));
-  let trackedVehicles = 0;
-
-  rows.forEach((row) => {
-    const fuelLevel = toFiniteNumber(row.fuelLevel, NaN);
-
-    if (!Number.isFinite(fuelLevel)) {
-      return;
-    }
-
-    trackedVehicles += 1;
-
-    const bucket = FUEL_BUCKETS.find(
-      (candidate) => fuelLevel >= candidate.min && fuelLevel < candidate.max
-    );
-
-    if (bucket) {
-      counts.set(bucket.key, counts.get(bucket.key) + 1);
-    }
-  });
-
-  const totalTrackedVehicles = trackedVehicles;
-
-  return {
-    totalTrackedVehicles,
-    items: FUEL_BUCKETS.map((bucket) => {
-      const value = counts.get(bucket.key) || 0;
-
-      return {
-        key: bucket.key,
-        label: bucket.label,
-        value,
-        color: bucket.color,
-        ratio: totalTrackedVehicles ? Number(((value / totalTrackedVehicles) * 100).toFixed(1)) : 0
-      };
-    })
-  };
-}
-
 function buildStatusBreakdown(rows) {
   const counts = {
     driving: 0,
@@ -220,8 +240,7 @@ function buildStatusBreakdown(rows) {
     counts[row.status] += 1;
   });
 
-  const totalTrackedVehicles =
-    counts.driving + counts.engine_off + counts.stopped;
+  const totalTrackedVehicles = counts.driving + counts.engine_off + counts.stopped;
 
   return {
     totalTrackedVehicles,
@@ -262,12 +281,7 @@ function formatVehicleRow(row, nowSeconds) {
     mode: row.mode === null || row.mode === undefined ? null : Number(row.mode),
     lastUpdatedAt: formatDateTime(status.timestampSeconds),
     timestampSeconds: status.timestampSeconds,
-    delaySeconds: status.delaySeconds,
-    locationLabel: formatLocationLabel(row.lat, row.lon),
-    isDelayed:
-      status.timestampSeconds !== null &&
-      status.delaySeconds >= DELAY_WARNING_SECONDS &&
-      status.key !== 'offline'
+    locationLabel: resolveShortLocationLabel(row.lat, row.lon)
   };
 }
 
@@ -301,102 +315,67 @@ function buildSummary(rows) {
   );
 }
 
-function buildDelayedVehicles(rows) {
-  return rows
-    .filter(
-      (row) =>
-        row.status !== 'no_data' &&
-        row.delaySeconds !== null &&
-        row.delaySeconds >= DELAY_WARNING_SECONDS
-    )
-    .sort((left, right) => {
-      const diff = (right.delaySeconds || 0) - (left.delaySeconds || 0);
-      return diff !== 0 ? diff : compareVehicleIds(left.vehicleId, right.vehicleId);
-    })
-    .slice(0, 12)
-    .map((row) => ({
-      vehicleId: row.vehicleId,
-      status: row.status,
-      statusLabel: row.statusLabel,
-      statusColor: row.statusColor,
-      delaySeconds: row.delaySeconds,
-      delayLabel:
-        row.delaySeconds === null ? '-' : `${Math.floor(row.delaySeconds / 60)}m ${row.delaySeconds % 60}s`,
-      fuelLevel: row.fuelLevel,
-      lastUpdatedAt: row.lastUpdatedAt
-    }));
-}
+async function buildDrivingTrend(nowSeconds) {
+  const bucketSize = DRIVING_TREND_BUCKET_SECONDS;
+  const bucketEnd = Math.floor(nowSeconds / bucketSize) * bucketSize;
+  const bucketStart = bucketEnd - bucketSize * (DRIVING_TREND_POINTS - 1);
 
-function buildIdleVehicles(rows, latestByVehicleId, nowSeconds) {
-  const idleVehicles = [];
+  const result = await query(
+    `
+      WITH buckets AS (
+        SELECT generate_series($1::bigint, $2::bigint, $3::bigint) AS bucket_start
+      ),
+      normalized_stats AS (
+        SELECT
+          vehicle_id,
+          engine_on,
+          speed,
+          mode,
+          CASE
+            WHEN timestamp IS NULL THEN NULL
+            WHEN timestamp > 10000000000 THEN FLOOR(timestamp / 1000.0)::bigint
+            ELSE timestamp::bigint
+          END AS ts_seconds
+        FROM vehicle_stats
+      ),
+      bucketed_counts AS (
+        SELECT
+          (
+            FLOOR((ts_seconds - $1::bigint)::numeric / $3::bigint) * $3::bigint
+            + $1::bigint
+          )::bigint AS bucket_start,
+          COUNT(DISTINCT vehicle_id) FILTER (
+            WHERE engine_on = TRUE
+              AND (COALESCE(speed, 0) > 0 OR mode = 1)
+          ) AS driving_count
+        FROM normalized_stats
+        WHERE ts_seconds IS NOT NULL
+          AND ts_seconds >= $1::bigint
+          AND ts_seconds < ($2::bigint + $3::bigint)
+        GROUP BY 1
+      )
+      SELECT
+        buckets.bucket_start AS "bucketStart",
+        COALESCE(bucketed_counts.driving_count, 0) AS "drivingCount"
+      FROM buckets
+      LEFT JOIN bucketed_counts
+        ON bucketed_counts.bucket_start = buckets.bucket_start
+      ORDER BY buckets.bucket_start ASC
+    `,
+    [bucketStart, bucketEnd, bucketSize]
+  );
 
-  rows.forEach((row) => {
-    const latest = latestByVehicleId.get(row.vehicleId);
-
-    if (!latest || !latest.length) {
-      return;
-    }
-
-    const latestVehicle = latest[0];
-    const latestStatus = resolveVehicleStatus(latestVehicle, nowSeconds);
-
-    if (latestStatus.key === 'offline' || latestStatus.key === 'engine_off') {
-      return;
-    }
-
-    let streakStart = null;
-
-    for (const record of latest) {
-      if (!record.engineOn || toFiniteNumber(record.speed, 0) > 0) {
-        break;
-      }
-
-      streakStart = toEpochSeconds(record.timestamp);
-    }
-
-    if (streakStart === null || latestStatus.timestampSeconds === null) {
-      return;
-    }
-
-    const idleSeconds = Math.max(0, latestStatus.timestampSeconds - streakStart);
-
-    if (idleSeconds < IDLE_WARNING_SECONDS) {
-      return;
-    }
-
-    idleVehicles.push({
-      vehicleId: row.vehicleId,
-      idleSeconds,
-      idleMinutes: Number((idleSeconds / 60).toFixed(1)),
-      fuelLevel: row.fuelLevel,
-      lastUpdatedAt: row.lastUpdatedAt,
-      locationLabel: row.locationLabel
-    });
-  });
-
-  return idleVehicles
-    .sort((left, right) => {
-      const diff = right.idleSeconds - left.idleSeconds;
-      return diff !== 0 ? diff : compareVehicleIds(left.vehicleId, right.vehicleId);
-    })
-    .slice(0, 8);
-}
-
-function buildDrivingTrend(rows) {
-  return rows.map((row) => ({
-    timestampSeconds: toEpochSeconds(row.bucketEpoch),
-    label: formatTimeLabel(row.bucketEpoch),
-    value: Number(row.drivingVehicles || 0)
+  return result.rows.map((row) => ({
+    timestamp: Number(row.bucketStart),
+    label: formatTimeLabel(row.bucketStart),
+    value: Number(row.drivingCount || 0)
   }));
 }
 
 export async function loadOperatorVehicleDashboard() {
   const nowSeconds = Math.floor(Date.now() / 1000);
-  const alignedBucketNow = nowSeconds - (nowSeconds % DRIVING_TREND_BUCKET_SECONDS);
-  const trendStart =
-    alignedBucketNow - (DRIVING_TREND_BUCKET_SECONDS * (DRIVING_TREND_POINTS - 1));
 
-  const [latestVehiclesResult, recentStatsResult, drivingTrendResult] = await Promise.all([
+  const [latestVehiclesResult, drivingTrend] = await Promise.all([
     query(`
       WITH vehicle_ids AS (
         SELECT vehicle_id FROM vehicle_master
@@ -416,7 +395,7 @@ export async function loadOperatorVehicleDashboard() {
           mode,
           ROW_NUMBER() OVER (
             PARTITION BY vehicle_id
-            ORDER BY timestamp DESC, id DESC
+            ORDER BY timestamp DESC
           ) AS row_number
         FROM vehicle_stats
       )
@@ -436,59 +415,10 @@ export async function loadOperatorVehicleDashboard() {
        AND stats.row_number = 1
       ORDER BY ids.vehicle_id ASC
     `),
-    query(`
-      WITH ranked_stats AS (
-        SELECT
-          vehicle_id AS "vehicleId",
-          timestamp,
-          speed,
-          engine_on AS "engineOn",
-          ROW_NUMBER() OVER (
-            PARTITION BY vehicle_id
-            ORDER BY timestamp DESC, id DESC
-          ) AS row_number
-        FROM vehicle_stats
-      )
-      SELECT
-        "vehicleId",
-        timestamp,
-        speed,
-        "engineOn"
-      FROM ranked_stats
-      WHERE row_number <= 24
-      ORDER BY "vehicleId" ASC, timestamp DESC
-    `),
-    query(
-      `
-        WITH buckets AS (
-          SELECT generate_series($1, $2, $3) AS "bucketEpoch"
-        )
-        SELECT
-          buckets."bucketEpoch",
-          COUNT(DISTINCT stats.vehicle_id)::int AS "drivingVehicles"
-        FROM buckets
-        LEFT JOIN vehicle_stats stats
-          ON stats.timestamp >= buckets."bucketEpoch"
-         AND stats.timestamp < buckets."bucketEpoch" + $3
-         AND stats.engine_on = true
-         AND (COALESCE(stats.speed, 0) > 0 OR stats.mode = 1)
-        GROUP BY buckets."bucketEpoch"
-        ORDER BY buckets."bucketEpoch" ASC
-      `,
-      [trendStart, alignedBucketNow, DRIVING_TREND_BUCKET_SECONDS]
-    )
+    buildDrivingTrend(nowSeconds)
   ]);
 
   const latestRows = latestVehiclesResult.rows.map((row) => formatVehicleRow(row, nowSeconds));
-  const latestByVehicleId = new Map();
-
-  recentStatsResult.rows.forEach((row) => {
-    if (!latestByVehicleId.has(row.vehicleId)) {
-      latestByVehicleId.set(row.vehicleId, []);
-    }
-
-    latestByVehicleId.get(row.vehicleId).push(row);
-  });
 
   const sortedVehicleTable = [...latestRows].sort((left, right) => {
     const statusPriority = {
@@ -521,17 +451,9 @@ export async function loadOperatorVehicleDashboard() {
     generatedAt: formatDateTime(nowSeconds),
     latestVehicleUpdatedAt: formatDateTime(latestVehicleTimestamp),
     refreshIntervalSeconds: REFRESH_INTERVAL_SECONDS,
-    thresholds: {
-      delayedSeconds: DELAY_WARNING_SECONDS,
-      offlineSeconds: OFFLINE_THRESHOLD_SECONDS,
-      idleSeconds: IDLE_WARNING_SECONDS
-    },
     summary: buildSummary(latestRows),
     statusBreakdown: buildStatusBreakdown(latestRows),
-    fuelSummary: buildFuelSummary(latestRows),
-    drivingTrend: buildDrivingTrend(drivingTrendResult.rows),
     vehicleTable: sortedVehicleTable,
-    delayedVehicles: buildDelayedVehicles(latestRows),
-    idleVehicles: buildIdleVehicles(latestRows, latestByVehicleId, nowSeconds)
+    drivingTrend
   };
 }
