@@ -142,7 +142,8 @@ try:
                 "last_lat": raw_data.get('lat', 0),
                 "last_seen": now,
                 "msg_times": [now],
-                "missing_alert_sent": False
+                "missing_alert_sent": False,
+                "low_fuel_alert_sent": False
             }
         
         state = vehicle_states[v_id]
@@ -170,8 +171,11 @@ try:
 
         # 연료 부족
         fuel = raw_data.get('fuel_level', 100)
-        if fuel < 5.0:
+        if fuel < 5.0 and not state.get('low_fuel_alert_sent', False):
             send_alert(v_id, "LOW_FUEL", "연료 부족 경고", f"잔량 {fuel}%", v_timestamp)
+            state['low_fuel_alert_sent'] = True
+        elif fuel >= 5.0:
+            state['low_fuel_alert_sent'] = False
 
         # GPS 도약
         curr_lat = raw_data.get('lat', 0)
