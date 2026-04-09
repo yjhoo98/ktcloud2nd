@@ -13,241 +13,37 @@
 │       ├── aws-deploy.yml
 │       ├── azure-deploy.yml
 │       └── README.md
-├── .gitignore
-├── AGENTS.md
-├── README.md
 ├── apps/
 │   └── web-platform/
+│       ├── backend/
+│       ├── frontend/
 │       ├── .env.example
 │       ├── deploy.env.example
 │       ├── docker-compose.deployment.yml
-│       ├── package-lock.json
-│       ├── backend/
-│       │   ├── .dockerignore
-│       │   ├── .env.example
-│       │   ├── Dockerfile
-│       │   ├── package-lock.json
-│       │   ├── package.json
-│       │   └── src/
-│       │       ├── anomalyDashboard.js
-│       │       ├── authSecurity.js
-│       │       ├── db.js
-│       │       ├── grafana.js
-│       │       ├── initSchema.js
-│       │       ├── operatorVehicleDashboard.js
-│       │       ├── server.js
-│       │       └── userDashboard.js
-│       └── frontend/
-│           ├── .dockerignore
-│           ├── .env.example
-│           ├── Dockerfile
-│           ├── index.html
-│           ├── nginx-login.conf
-│           ├── nginx-operator.conf
-│           ├── nginx-user.conf
-│           ├── nginx.conf
-│           ├── nginx.login-operator.conf
-│           ├── nginx.login.conf
-│           ├── nginx.operator.conf
-│           ├── nginx.user.conf
-│           ├── package-lock.json
-│           ├── package.json
-│           ├── postcss.config.js
-│           ├── tailwind.config.js
-│           ├── vite.config.js
-│           ├── public/
-│           │   └── models/
-│           │       ├── avante.png
-│           │       ├── grandeur.png
-│           │       ├── santafe.png
-│           │       └── tucson.png
-│           └── src/
-│               ├── App.jsx
-│               ├── index.css
-│               ├── main.jsx
-│               ├── api/
-│               │   ├── anomalyDashboard.js
-│               │   ├── auth.js
-│               │   ├── grafana.js
-│               │   ├── operatorVehicleDashboard.js
-│               │   ├── sessionRequest.js
-│               │   └── userDashboard.js
-│               ├── components/
-│               │   ├── AppRedirect.jsx
-│               │   ├── DashboardLayout.jsx
-│               │   └── GrafanaEmbedFrame.jsx
-│               ├── config/
-│               │   └── appTarget.js
-│               ├── pages/
-│               │   ├── auth/
-│               │   │   └── LoginPage.jsx
-│               │   ├── operator/
-│               │   │   ├── OperatorAnomalyPage.jsx
-│               │   │   ├── OperatorDashboardPage.jsx
-│               │   │   ├── OperatorInfraServicePage.jsx
-│               │   │   └── OperatorVehiclePage.jsx
-│               │   └── user/
-│               │       └── UserDashboardPage.jsx
-│               ├── routes/
-│               │   ├── AppRouter.jsx
-│               │   └── ProtectedRoute.jsx
-│               └── utils/
-│                   └── authStorage.js
+│       └── package-lock.json
 ├── infra/
 │   ├── aws/
 │   │   ├── ansible/
-│   │   │   ├── ansible.cfg
-│   │   │   ├── README.md
-│   │   │   ├── playbooks/
-│   │   │   │   ├── README.md
-│   │   │   │   └── setup_k3s_cluster.yml
-│   │   │   ├── roles/
-│   │   │   │   ├── README.md
-│   │   │   │   ├── argocd/
-│   │   │   │   │   └── tasks/
-│   │   │   │   │       └── main.yml
-│   │   │   │   ├── aws-ccm/
-│   │   │   │   │   ├── files/
-│   │   │   │   │   │   └── aws-ccm-values.yaml
-│   │   │   │   │   └── tasks/
-│   │   │   │   │       └── main.yml
-│   │   │   │   ├── cluster-autoscaler/
-│   │   │   │   │   └── tasks/
-│   │   │   │   │       └── main.yml
-│   │   │   │   ├── db_setup/
-│   │   │   │   │   ├── defaults/
-│   │   │   │   │   │   └── main.yml
-│   │   │   │   │   ├── files/
-│   │   │   │   │   │   └── schema.sql
-│   │   │   │   │   └── tasks/
-│   │   │   │   │       └── main.yml
-│   │   │   │   ├── k3s_master/
-│   │   │   │   │   └── tasks/
-│   │   │   │   │       └── main.yml
-│   │   │   │   ├── linkerd/
-│   │   │   │   │   └── tasks/
-│   │   │   │   │       └── main.yml
-│   │   │   │   ├── prometheus/
-│   │   │   │   │   ├── files/
-│   │   │   │   │   │   ├── kube-prometheus-stack-values.yaml
-│   │   │   │   │   │   └── grafana-dashboards/
-│   │   │   │   │   │       └── k3s-infra-overview.json
-│   │   │   │   │   ├── tasks/
-│   │   │   │   │   │   └── main.yml
-│   │   │   │   │   └── templates/
-│   │   │   │   │       └── grafana-dashboard-k3s-infra-overview-configmap.yaml.j2
-│   │   │   │   └── web_platform_env/
-│   │   │   │       └── tasks/
-│   │   │   │           └── main.yml
-│   │   │   └── vault/
-│   │   │       └── vault.yml
 │   │   ├── lambda/
-│   │   │   └── slack-anomaly-notifier/
-│   │   │       ├── index.mjs
-│   │   │       ├── package-lock.json
-│   │   │       └── package.json
 │   │   └── terraform/
-│   │       ├── alerts/
-│   │       │   ├── lambda.tf
-│   │       │   ├── outputs.tf
-│   │       │   ├── provider.tf
-│   │       │   ├── terraform.tfvars.example
-│   │       │   └── variables.tf
-│   │       ├── compute/
-│   │       │   ├── .terraform.lock.hcl
-│   │       │   ├── ansible_inventory.tf
-│   │       │   ├── iam.tf
-│   │       │   ├── main.tf
-│   │       │   ├── outputs.tf
-│   │       │   ├── provider.tf
-│   │       │   ├── README.md
-│   │       │   ├── remote_state.tf
-│   │       │   ├── terraform.tfvars.example
-│   │       │   └── variables.tf
-│   │       ├── data/
-│   │       │   ├── .terraform.lock.hcl
-│   │       │   ├── main.tf
-│   │       │   ├── outputs.tf
-│   │       │   ├── provider.tf
-│   │       │   ├── README.md
-│   │       │   ├── terraform.tfvars.example
-│   │       │   └── variables.tf
-│   │       └── network/
-│   │           ├── .terraform.lock.hcl
-│   │           ├── checks.tf
-│   │           ├── main.tf
-│   │           ├── outputs.tf
-│   │           ├── provider.tf
-│   │           ├── README.md
-│   │           ├── terraform.tfvars.example
-│   │           └── variables.tf
 │   ├── azure/
 │   │   ├── ansible/
-│   │   │   ├── playbook.yml
-│   │   │   └── roles/
-│   │   │       ├── docker/
-│   │   │       │   └── tasks/
-│   │   │       │       └── main.yml
-│   │   │       ├── kafka-broker/
-│   │   │       │   ├── tasks/
-│   │   │       │   │   └── main.yml
-│   │   │       │   └── templates/
-│   │   │       │       └── docker-compose.yml.j2
-│   │   │       └── kafka-consumer/
-│   │   │           ├── files/
-│   │   │           │   ├── processor.py
-│   │   │           │   └── requirements.txt
-│   │   │           ├── tasks/
-│   │   │           │   └── main.yml
-│   │   │           └── templates/
-│   │   │               ├── docker-compose.yml.j2
-│   │   │               └── Dockerfile.j2
 │   │   ├── scripts/
-│   │   │   └── install-self-hosted-runner.sh
 │   │   └── terraform/
-│   │       ├── bastion.tf
-│   │       ├── broker.tf
-│   │       ├── connect.tf
-│   │       ├── consumer.tf
-│   │       ├── network.tf
-│   │       ├── outputs.tf
-│   │       ├── providers.tf
-│   │       ├── README.md
-│   │       ├── storage.tf
-│   │       └── variables.tf
 │   └── edge/
 │       ├── docker-compose.yml
 │       ├── Dockerfile
 │       ├── README.md
 │       └── vehicle_simulator.py
-└── k8s/
-    ├── backend-login/
-    │   ├── deployment.yaml
-    │   ├── hpa.yaml
-    │   ├── rds-env.example.yaml
-    │   └── service.yaml
-    ├── backend-operator/
-    │   ├── deployment.yaml
-    │   ├── rds-env.example.yaml
-    │   └── service.yaml
-    ├── backend-user/
-    │   ├── deployment.yaml
-    │   ├── hpa.yaml
-    │   ├── rds-env.example.yaml
-    │   └── service.yaml
-    ├── frontend-operator-app/
-    │   ├── coraza-middleware.yml
-    │   ├── deployment.yaml
-    │   ├── grafana-ingress.yml
-    │   ├── linkerd-viz-ingress.yml
-    │   ├── operator-ingress.yml
-    │   └── service.yaml
-    └── frontend-user-app/
-        ├── coraza-middleware.yml
-        ├── deployment.yaml
-        ├── hpa.yaml
-        ├── service.yaml
-        └── user-ingress.yml
+├── k8s/
+│   ├── backend-login/
+│   ├── backend-operator/
+│   ├── backend-user/
+│   ├── frontend-operator-app/
+│   └── frontend-user-app/
+├── .gitignore
+├── AGENTS.md
+└── README.md
 ```
 
 ## Branch Strategy
